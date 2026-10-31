@@ -33,6 +33,12 @@ def load_topics():
     return json.loads(TOPICS_FILE.read_text()) if TOPICS_FILE.exists() else []
 
 
+def _rotation_index():
+    """Kun va soat bo'yicha: bir kundagi 4 ta video (06, 10, 14, 18 UTC) har xil turda bo'ladi."""
+    now = datetime.utcnow()
+    return now.timetuple().tm_yday * 24 + now.hour
+
+
 def slug(text):
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40]
 
@@ -44,7 +50,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--type", choices=["auto", *VIDEO_TYPES], default="story",
                     help="auto = kun bo'yicha navbat bilan (namuna berilsa — namunaga mos tur)")
-    ap.add_argument("--length", type=float, default=3, help="daqiqa: 3, 10, 15, 20 ...")
+    ap.add_argument("--format", choices=["long", "short"], default="long",
+                    help="long = oddiy gorizontal video, short = YouTube Shorts (tik, ~45 soniya)")
+    ap.add_argument("--length", type=float, help="daqiqa: 3, 10, 15, 20 ... (Shorts uchun 0.75)")
     ap.add_argument("--topic", help="mavzu (bo'lmasa AI o'zi tanlaydi)")
     ap.add_argument("--no-upload", action="store_true", help="faqat video yaratish, yuklamaslik")
     ap.add_argument("--from-script", help="tayyor script.json dan video yasash")
@@ -54,6 +62,8 @@ def main():
     ap.add_argument("--style", choices=["auto", "stock", "ai"], default="auto",
                     help="stock = Pixabay video/rasm, ai = AI rasm, auto = config.yaml dagi tartib")
     args = ap.parse_args()
+    if args.length is None:
+        args.length = 0.75 if args.format == "short" else 3
     if args.privacy:
         cfg["youtube"]["privacy"] = args.privacy
     if args.voice:
@@ -71,9 +81,10 @@ def main():
             ref = reference.fetch(args.reference)
             print(f"  Namuna: {ref['title']} ({ref['channel']}, {ref['minutes']} daq)")
         if args.type == "auto":
-            args.type = writer.pick_type(ref) if ref else VIDEO_TYPES[datetime.now().timetuple().tm_yday % len(VIDEO_TYPES)]
+            args.type = writer.pick_type(ref) if ref else VIDEO_TYPES[_rotation_index() % len(VIDEO_TYPES)]
         print(f"[1/5] Ssenariy yozilmoqda ({args.type}, {args.length} daqiqa)...")
-        script = writer.write(args.type, args.length, args.topic, load_topics(), reference=ref)
+        script = writer.write(args.type, args.length, args.topic, load_topics(), reference=ref,
+                              short=args.format == "short")
         if ref:
             script["reference"] = ref["url"]
 
@@ -86,10 +97,13 @@ def main():
     print(f"  Sarlavha: {script['title']}  ({len(script['scenes'])} sahna)\n  Papka: {workdir}")
 
     vcfg = cfg["video"]
+    short = script.get("format") == "short"
+    if short:
+        vcfg["width"], vcfg["height"] = 1080, 1920
     style = cfg["cartoon_style"] if script.get("type") == "cartoon" else cfg["image_style"]
     characters = script.get("characters") or ""
     base_seed = random.randint(1, 10**8)  # ketma-ket seed — rasmlar uslubi izchilroq
-    pixabay = stock.Pixabay()
+    pixabay = stock.Pixabay(vertical=short)
     sources = STYLE_SOURCES.get(args.style) or cfg["media"].get(script.get("type", "story"), ["ai"])
     if not pixabay.enabled:
         sources = [s for s in sources if not s.startswith("pixabay")] or ["ai"]
@@ -164,8 +178,11 @@ def main():
     final = workdir / "final.mp4"
     video_builder.render(script, scenes, workdir, final, random.choice(tracks) if tracks else None,
                          vcfg["music_volume"], vcfg.get("render_concurrency", 2), vcfg.get("crf", 16))
-    thumb = workdir / "thumbnail.jpg"
-    video_builder.thumbnail(workdir / "img_000.jpg", script["title"], thumb)
+    if short:
+        thumb = workdir / "img_000.jpg"  # Shorts'ga YouTube o'z muqovasini qo'yadi; bu faqat Telegram uchun
+    else:
+        thumb = workdir / "thumbnail.jpg"
+        video_builder.thumbnail(workdir / "img_000.jpg", script["title"], thumb)
     print(f"  Tayyor: {final}  ({tts.audio_duration(final) / 60:.1f} daqiqa)")
 
     topics = load_topics()
@@ -176,7 +193,7 @@ def main():
         return
     from pipeline.uploader import upload
     print("YouTube'ga yuklanmoqda...")
-    vid = upload(final, script, thumb, cfg["youtube"])
+    vid = upload(final, script, None if short else thumb, cfg["youtube"])
     print(f"  Yuklandi: https://youtu.be/{vid}  (holat: {cfg['youtube']['privacy']})")
     gh_output = os.getenv("GITHUB_OUTPUT")
     if gh_output:  # keyingi qadam (Telegram xabarnomasi) uchun

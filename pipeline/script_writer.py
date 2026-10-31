@@ -31,6 +31,12 @@ Intro and goodbye scenes have no "quiz" field."""
 
 SCENE_SECONDS = {"games": 22}  # savol + 5 soniya taymer + javob
 
+SHORT_WORDS_PER_SCENE = 22
+SHORT_GUIDE = """
+This is a vertical YouTube Short for kids, 40-55 seconds long. Grab attention in the first 2 seconds,
+no long greeting, one clear idea, fast pace, playful energy. Title: max 60 characters.
+Description: 1-2 sentences plus hashtags #Shorts #kids #forkids."""
+
 
 class ScriptWriter:
     def __init__(self, cfg):
@@ -59,11 +65,16 @@ Return JSON: {{"type": one of {list(TYPE_GUIDES)}}}""",
         )
         return data.get("type") if data.get("type") in TYPE_GUIDES else "story"
 
-    def write(self, video_type, minutes, topic=None, avoid_topics=(), reference=None):
-        if video_type in SCENE_SECONDS:
+    def write(self, video_type, minutes, topic=None, avoid_topics=(), reference=None, short=False):
+        games = video_type == "games"
+        wps = SHORT_WORDS_PER_SCENE if short else self.wps
+        if short:
+            # Shorts: tez sahnalar; o'yinda 1 gaplik kirish + 2 ta savol
+            total_scenes = 3 if games else max(3, math.ceil(minutes * self.wpm / wps))
+        elif video_type in SCENE_SECONDS:
             total_scenes = max(5, math.ceil(minutes * 60 / SCENE_SECONDS[video_type]))
         else:
-            total_scenes = max(6, math.ceil(minutes * self.wpm / self.wps))
+            total_scenes = max(6, math.ceil(minutes * self.wpm / wps))
         # Uzun videolar bo'limlarga bo'linadi, shunda bitta javob juda uzun bo'lmaydi
         n_parts = max(1, math.ceil(total_scenes / 12))
         scenes_per_part = math.ceil(total_scenes / n_parts)
@@ -78,9 +89,10 @@ Make a NEW ORIGINAL video in the same format. Do NOT copy its story, characters,
 Reference:
 {reference_text(reference)}
 """
+        fmt = SHORT_GUIDE if short else ""
         outline = self._ask(
             SAFETY_RULES,
-            f"""Plan a {minutes}-minute kids video. Type: {TYPE_GUIDES[video_type]}{ref}
+            f"""Plan a {"YouTube Short (vertical, under 60 seconds)" if short else f"{minutes}-minute"} kids video. Type: {TYPE_GUIDES[video_type]}{fmt}{ref}
 Topic: {topic or "choose a fresh, original topic"}. Do NOT reuse these topics: {avoid}.
 Return JSON:
 {{"topic": short topic name,
@@ -95,26 +107,39 @@ Return JSON:
         outline["parts"] = outline["parts"][:n_parts]
         scenes = []
         for i, part in enumerate(outline["parts"]):
-            prev = scenes[-1]["narration"] if scenes else "(this is the very beginning; start with a warm hello)"
+            start = ("(this is the very beginning; open with a one-sentence hook — a question or a surprising fact, no greeting)"
+                     if short else "(this is the very beginning; start with a warm hello)")
+            prev = scenes[-1]["narration"] if scenes else start
             is_last = i == len(outline["parts"]) - 1
-            ending = "End the video with a short recap and a friendly goodbye asking kids to come back for more." if is_last else "Do not end the video yet."
-            games = video_type == "games"
+            if short:
+                ending = "Keep it fast. The very last sentence of the video is: Follow for more!"
+            elif is_last:
+                ending = "End the video with a short recap and a friendly goodbye asking kids to come back for more."
+            else:
+                ending = "Do not end the video yet."
             example = ('{"narration": "...", "quiz": {"question": "...", "options": ["...", "...", "..."], "answer": 1}, '
                        '"answer_narration": "...", "image_prompt": "...", "search_query": "..."}' if games
                        else '{"narration": "...", "image_prompt": "...", "search_query": "..."}')
             rules = ""
+            has_intro = games and i == 0
+            has_outro = games and not short and is_last
             if games:
-                first = "Scene 1 is a short welcome that explains the game (no quiz). " if i == 0 else ""
-                last = "The final scene is a short goodbye (no quiz). " if is_last else ""
+                first = ""
+                if has_intro:
+                    first = ("Scene 1 is a one-sentence hook that invites kids to play (no quiz, max 12 words). " if short
+                             else "Scene 1 is a short welcome that explains the game (no quiz). ")
+                last = "The final scene is a short goodbye (no quiz). " if has_outro else ""
                 rules = f"{QUIZ_FORMAT}\n{first}{last}EVERY other scene MUST be a quiz scene with the quiz and answer_narration fields."
-            data = self._ask_scenes(games, i == 0, is_last,
+            if short:
+                rules += "\nimage_prompt: vertical portrait composition, subject in the center."
+            data = self._ask_scenes(games, has_intro, has_outro,
                 SAFETY_RULES,
                 f"""Video title: {outline["title"]}
 Characters: {outline.get("characters") or "none"}
 Full plan: {json.dumps([p["summary"] for p in outline["parts"]])}
 Now write part {i + 1} of {n_parts}: {part["summary"]}
 The previous narration was: {prev}
-Write exactly {scenes_per_part} scenes, each narration about {self.wps} words. {ending}
+Write exactly {scenes_per_part} scenes, each narration about {wps} words. {ending}
 {rules}
 Return JSON: {{"scenes": [{example}]}}""",
             )
@@ -126,6 +151,9 @@ Return JSON: {{"scenes": [{example}]}}""",
         outline["scenes"] = scenes
         outline["type"] = video_type
         outline["minutes"] = minutes
+        outline["format"] = "short" if short else "long"
+        if short and "#shorts" not in outline["title"].lower():
+            outline["title"] = f"{outline['title'][:90]} #Shorts"
         return outline
 
     def _ask_scenes(self, games, has_intro, has_outro, system, user, tries=3):

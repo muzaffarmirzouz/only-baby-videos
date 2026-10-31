@@ -7,8 +7,9 @@ API = "https://pixabay.com/api/"
 
 
 class Pixabay:
-    def __init__(self):
+    def __init__(self, vertical=False):
         self.key = os.getenv("PIXABAY_API_KEY")
+        self.vertical = vertical  # Shorts uchun tik rasm/klip afzal
         self.used = set()  # bitta videoda bir xil rasm/klip takrorlanmasin
 
     @property
@@ -29,7 +30,8 @@ class Pixabay:
     def image(self, query, out_path, image_type="all"):
         """Topilsa True. image_type: all | photo | illustration."""
         for q in (query, " ".join(query.split()[:1])):  # topilmasa birinchi so'z bilan qayta qidirish
-            hits = self._search(API, q, image_type=image_type, orientation="horizontal", min_width=1280)
+            hits = self._search(API, q, image_type=image_type,
+                                orientation="vertical" if self.vertical else "horizontal", min_width=1080)
             if hits:
                 hit = hits[0]
                 self._download(hit["largeImageURL"], out_path)
@@ -38,13 +40,19 @@ class Pixabay:
         return False
 
     def video(self, query, out_path):
-        """Gorizontal klip topilsa uning davomiyligini (soniya) qaytaradi, aks holda None."""
+        """Mos klip topilsa uning davomiyligini (soniya) qaytaradi, aks holda None.
+
+        Uzun video uchun faqat gorizontal; Shorts uchun avval tik kliplar, keyin gorizontal (kesib olinadi).
+        """
         for q in (query, " ".join(query.split()[:1])):
-            for hit in self._search(API + "videos/", q, min_width=1280):
+            hits = self._search(API + "videos/", q, min_width=1080)
+            if self.vertical:
+                hits.sort(key=lambda h: (h["videos"].get("large") or {}).get("height", 0) <= (h["videos"].get("large") or {}).get("width", 0))
+            for hit in hits:
                 v = hit["videos"].get("large") or {}
                 if not v.get("url"):
                     v = hit["videos"].get("medium") or {}
-                if v.get("url") and v.get("width", 0) > v.get("height", 1):
+                if v.get("url") and (self.vertical or v.get("width", 0) > v.get("height", 1)):
                     self._download(v["url"], out_path)
                     self.used.add(hit["id"])
                     return float(hit["duration"])

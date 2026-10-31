@@ -46,16 +46,19 @@ def create_video(data):
     style = data.get("style", "auto")
     voice = data.get("voice", "en-US-JennyNeural")
     privacy = data.get("privacy", "public")
-    length = str(data.get("length", "3"))
+    fmt = data.get("format", "long")
+    length = "" if fmt == "short" else str(data.get("length", "3"))
     topic = str(data.get("topic", "")).strip()[:200]
     reference = str(data.get("reference", "")).strip()
     if reference and not YT_RE.match(reference):
         raise ValueError("Namuna YouTube havolasi bo'lishi kerak")
     if vtype not in TYPES or style not in STYLES or voice not in VOICES or privacy not in PRIVACY:
         raise ValueError("Noto'g'ri qiymat tanlangan")
-    if not length.isdigit() or not 1 <= int(length) <= 30:
+    if fmt not in ("long", "short"):
+        raise ValueError("Noto'g'ri format")
+    if fmt == "long" and (not length.isdigit() or not 1 <= int(length) <= 30):
         raise ValueError("Uzunlik 1–30 daqiqa bo'lishi kerak")
-    gh("workflow", "run", WORKFLOW, "-f", f"type={vtype}", "-f", f"length={length}", "-f", f"topic={topic}", "-f", f"reference={reference}",
+    gh("workflow", "run", WORKFLOW, "-f", f"format={fmt}", "-f", f"type={vtype}", "-f", f"length={length}", "-f", f"topic={topic}", "-f", f"reference={reference}",
        "-f", f"style={style}", "-f", f"voice={voice}", "-f", f"privacy={privacy}")
     return {"ok": True}
 

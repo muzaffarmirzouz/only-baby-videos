@@ -194,6 +194,14 @@
     <h2>Yangi video</h2>
 
     <div class="field">
+      <label>Format</label>
+      <div class="seg" data-name="format">
+        <button data-v="long" class="on">Uzun video</button>
+        <button data-v="short">Shorts (tik, ~45 s)</button>
+      </div>
+    </div>
+
+    <div class="field">
       <label for="topic">Mavzu</label>
       <textarea id="topic" maxlength="200" placeholder="masalan: Why do cats purr? Bo'sh qolsa, AI o'zi tanlaydi"></textarea>
     </div>
@@ -227,7 +235,7 @@
     </div>
 
     <div class="row field">
-      <div>
+      <div id="length-box">
         <label for="length">Uzunlik</label>
         <select id="length">
           <option value="3">3 daqiqa</option>
@@ -277,7 +285,7 @@
 
 <script>
 const $ = (s) => document.querySelector(s);
-const state = { type: "auto", style: "auto" };
+const state = { type: "auto", style: "auto", format: "long" };
 
 document.querySelectorAll(".seg").forEach((seg) => {
   seg.addEventListener("click", (e) => {
@@ -290,11 +298,15 @@ document.querySelectorAll(".seg").forEach((seg) => {
 });
 
 function updateEstimate() {
-  const len = +$("#length").value;
-  const scenes = Math.ceil((len * 130) / 45);
+  const short = state.format === "short";
+  $("#length-box").style.visibility = short ? "hidden" : "visible";
+  const len = short ? 0.75 : +$("#length").value;
+  const scenes = short ? 5 : Math.ceil((len * 130) / 45);
   const ai = state.style === "ai" || (state.style === "auto" && ["story", "cartoon"].includes(state.type));
   const mins = Math.round(4 + scenes * (ai ? 0.85 : 0.15) + len * 0.8);
-  $("#estimate").textContent = `${len} daqiqalik video taxminan ${mins} daqiqada tayyor bo'ladi (${scenes} sahna).`;
+  $("#estimate").textContent = short
+    ? `Shorts taxminan ${mins} daqiqada tayyor bo'ladi.`
+    : `${len} daqiqalik video taxminan ${mins} daqiqada tayyor bo'ladi (${scenes} sahna).`;
   const hints = {
     auto: "Ertakka AI rasm, faktlarga stok video avtomatik tanlanadi.",
     stock: "Pixabay'dan haqiqiy video kliplar. Tez tayyorlanadi.",
@@ -334,7 +346,7 @@ $("#create").addEventListener("click", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         topic: $("#topic").value, reference: $("#reference").value.trim(), type: state.type, style: state.style,
-        length: $("#length").value, privacy: $("#privacy").value, voice: $("#voice").value,
+        format: state.format, length: $("#length").value, privacy: $("#privacy").value, voice: $("#voice").value,
       }),
     });
     msg.className = "msg ok";

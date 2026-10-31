@@ -42,24 +42,29 @@ type Scene = {
 export type Props = {
   title: string;
   kind: string;
+  vertical: boolean; // Shorts: 1080x1920
   music: string | null;
   musicVolume: number;
   scenes: Scene[];
 };
 
 const FPS = 30;
-const INTRO_SECONDS = 3;
+const introFrames = (vertical: boolean) => (vertical ? 45 : 90); // Shorts'da intro qisqa
 const PAUSE_SECONDS = 0.5;
 const COLORS = ["#ff5fa2", "#ffb800", "#38c9ff", "#7bdc4f", "#a970ff"];
 
 const sceneFrames = (s: Scene) => Math.ceil((s.duration + PAUSE_SECONDS) * FPS);
 
 const calculateMetadata: CalculateMetadataFunction<Props> = ({ props }) => {
-  const total = props.scenes.reduce((sum, s) => sum + sceneFrames(s), INTRO_SECONDS * FPS);
-  return { durationInFrames: Math.max(total, 1) };
+  const total = props.scenes.reduce((sum, s) => sum + sceneFrames(s), introFrames(props.vertical));
+  return {
+    durationInFrames: Math.max(total, 1),
+    width: props.vertical ? 1080 : 1920,
+    height: props.vertical ? 1920 : 1080,
+  };
 };
 
-const defaultProps: Props = { title: "My Kids Video", kind: "story", music: null, musicVolume: 0.12, scenes: [] };
+const defaultProps: Props = { title: "My Kids Video", kind: "story", vertical: false, music: null, musicVolume: 0.12, scenes: [] };
 
 export const MyComposition = () => {
   return (
@@ -76,17 +81,21 @@ export const MyComposition = () => {
   );
 };
 
-export const KidsVideo: React.FC<Props> = ({ title, kind, music, musicVolume, scenes }) => {
+export const KidsVideo: React.FC<Props> = ({ title, kind, vertical, music, musicVolume, scenes }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: "#fff4d6" }}>
       {music ? <Audio src={staticFile(music)} volume={musicVolume} loop /> : null}
       <Series>
-        <Series.Sequence durationInFrames={INTRO_SECONDS * FPS}>
-          <Intro title={title} image={scenes[0]?.image} />
+        <Series.Sequence durationInFrames={introFrames(vertical)}>
+          <Intro title={title.replace(/\s*#shorts/i, "")} image={scenes[0]?.image} vertical={vertical} />
         </Series.Sequence>
         {scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={sceneFrames(s)}>
-            {s.quiz ? <QuizScene scene={s} quiz={s.quiz} /> : <SceneView scene={s} index={i} cartoon={kind === "cartoon"} />}
+            {s.quiz ? (
+              <QuizScene scene={s} quiz={s.quiz} vertical={vertical} />
+            ) : (
+              <SceneView scene={s} index={i} cartoon={kind === "cartoon"} vertical={vertical} />
+            )}
           </Series.Sequence>
         ))}
       </Series>
@@ -94,11 +103,12 @@ export const KidsVideo: React.FC<Props> = ({ title, kind, music, musicVolume, sc
   );
 };
 
-const Intro: React.FC<{ title: string; image?: string }> = ({ title, image }) => {
+const Intro: React.FC<{ title: string; image?: string; vertical: boolean }> = ({ title, image, vertical }) => {
   const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
   const { fps } = useVideoConfig();
   const words = title.split(" ");
-  const fadeOut = interpolate(frame, [INTRO_SECONDS * fps - 12, INTRO_SECONDS * fps], [1, 0], {
+  const fadeOut = interpolate(frame, [durationInFrames - 12, durationInFrames], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -107,7 +117,7 @@ const Intro: React.FC<{ title: string; image?: string }> = ({ title, image }) =>
       {image ? (
         <Img src={staticFile(image)} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(8px) brightness(0.9)" }} />
       ) : null}
-      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", padding: 120, flexWrap: "wrap", flexDirection: "row", gap: 28 }}>
+      <AbsoluteFill style={{ justifyContent: "center", alignContent: "center", alignItems: "center", padding: vertical ? 70 : 120, flexWrap: "wrap", flexDirection: "row", gap: 28 }}>
         {words.map((w, i) => {
           const pop = spring({ frame: frame - i * 4, fps, config: { damping: 9, mass: 0.6 } });
           return (
@@ -115,7 +125,7 @@ const Intro: React.FC<{ title: string; image?: string }> = ({ title, image }) =>
               key={i}
               style={{
                 fontFamily: fontFamily,
-                fontSize: 120,
+                fontSize: vertical ? 130 : 120,
                 fontWeight: 700,
                 color: COLORS[i % COLORS.length],
                 WebkitTextStroke: "6px #1e1e5a",
@@ -133,7 +143,7 @@ const Intro: React.FC<{ title: string; image?: string }> = ({ title, image }) =>
   );
 };
 
-const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean }> = ({ scene, cartoon }) => {
+const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; vertical: boolean }> = ({ scene, cartoon, vertical }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const p = frame / durationInFrames;
@@ -186,16 +196,16 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean }> = (
       </AbsoluteFill>
       <Audio src={staticFile(scene.audio)} />
       {caption ? (
-        <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 60 }}>
+        <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: vertical ? 380 : 60 }}>
           <div
             style={{
-              maxWidth: 1500,
+              maxWidth: vertical ? 940 : 1500,
               padding: "22px 44px",
               borderRadius: 36,
               backgroundColor: "rgba(20, 20, 60, 0.62)",
               color: "white",
               fontFamily: fontFamily,
-              fontSize: 60,
+              fontSize: vertical ? 74 : 60,
               lineHeight: 1.25,
               textAlign: "center",
               transform: `scale(${0.85 + 0.15 * pop})`,
@@ -211,7 +221,7 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean }> = (
 
 const OPTION_COLORS = ["#ff5fa2", "#38c9ff", "#ffb800"];
 
-const QuizScene: React.FC<{ scene: Scene; quiz: Quiz }> = ({ scene, quiz }) => {
+const QuizScene: React.FC<{ scene: Scene; quiz: Quiz; vertical: boolean }> = ({ scene, quiz, vertical }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const t = frame / fps;
@@ -244,14 +254,14 @@ const QuizScene: React.FC<{ scene: Scene; quiz: Quiz }> = ({ scene, quiz }) => {
         <Audio src={staticFile(quiz.answerAudio)} />
       </Sequence>
 
-      <AbsoluteFill style={{ alignItems: "center", paddingTop: 70 }}>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: vertical ? 240 : 70 }}>
         <div
           style={{
-            fontSize: 84,
+            fontSize: vertical ? 92 : 84,
             fontWeight: 700,
             color: "#fff",
             textAlign: "center",
-            maxWidth: 1600,
+            maxWidth: vertical ? 960 : 1600,
             WebkitTextStroke: "5px #1e1e5a",
             paintOrder: "stroke fill",
             transform: `scale(${spring({ frame, fps, config: { damping: 9 } })})`,
@@ -261,8 +271,10 @@ const QuizScene: React.FC<{ scene: Scene; quiz: Quiz }> = ({ scene, quiz }) => {
         </div>
       </AbsoluteFill>
 
-      <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: caption ? 230 : 110 }}>
-        <div style={{ display: "flex", gap: 40 }}>
+      <AbsoluteFill
+        style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: vertical ? (caption ? 560 : 420) : caption ? 230 : 110 }}
+      >
+        <div style={{ display: "flex", flexDirection: vertical ? "column" : "row", gap: vertical ? 28 : 40 }}>
           {quiz.options.map((o, i) => {
             const pop = spring({ frame: frame - 8 - i * 6, fps, config: { damping: 9, mass: 0.6 } });
             const correct = i === quiz.answer;
@@ -272,7 +284,7 @@ const QuizScene: React.FC<{ scene: Scene; quiz: Quiz }> = ({ scene, quiz }) => {
               <div
                 key={i}
                 style={{
-                  minWidth: 380,
+                  minWidth: vertical ? 760 : 380,
                   padding: "26px 40px",
                   borderRadius: 36,
                   background: bg,
@@ -295,7 +307,7 @@ const QuizScene: React.FC<{ scene: Scene; quiz: Quiz }> = ({ scene, quiz }) => {
 
       {/* Taymer */}
       {t >= countStart && !revealed ? (
-        <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
+        <AbsoluteFill style={{ justifyContent: vertical ? "flex-start" : "center", alignItems: "center", paddingTop: vertical ? 560 : 0 }}>
           <div
             style={{
               width: 260,
@@ -318,10 +330,10 @@ const QuizScene: React.FC<{ scene: Scene; quiz: Quiz }> = ({ scene, quiz }) => {
       ) : null}
 
       {caption ? (
-        <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 60 }}>
+        <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: vertical ? 300 : 60 }}>
           <div
             style={{
-              maxWidth: 1500,
+              maxWidth: vertical ? 940 : 1500,
               padding: "18px 40px",
               borderRadius: 32,
               backgroundColor: "rgba(20, 20, 60, 0.7)",

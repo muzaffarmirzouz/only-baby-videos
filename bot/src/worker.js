@@ -67,7 +67,8 @@ async function createVideo(env, o) {
     topic: String(o.topic || "").trim().slice(0, 200),
     reference: YT_RE.test(String(o.reference || "")) ? String(o.reference).match(YT_RE)[0] : "",
     type: TYPES[o.type] ? o.type : "auto",
-    length: LENGTHS.includes(String(o.length)) ? String(o.length) : "3",
+    format: o.format === "short" ? "short" : "long",
+    length: o.format === "short" ? "" : LENGTHS.includes(String(o.length)) ? String(o.length) : "3",
     style: STYLES.includes(o.style) ? o.style : "auto",
     voice: VOICES.includes(o.voice) ? o.voice : VOICES[0],
     privacy: PRIVACY.includes(o.privacy) ? o.privacy : "public",
@@ -117,6 +118,7 @@ function typeKeyboard() {
 function lengthKeyboard(type) {
   return {
     inline_keyboard: [
+      [{ text: "📱 Shorts (~45 soniya)", callback_data: `go:${type}:short` }],
       LENGTHS.map((l) => ({ text: `${l} daq`, callback_data: `go:${type}:${l}` })),
       [{ text: "← Orqaga", callback_data: "back" }],
     ],
@@ -200,17 +202,18 @@ async function handleUpdate(update, env, origin) {
 
   if (kind === "t") {
     await tg(env, "editMessageText", {
-      chat_id, message_id, text: `${head}\nTuri: ${TYPES[type]}\n\nUzunligini tanlang:`,
+      chat_id, message_id, text: `${head}\nTuri: ${TYPES[type]}\n\nShorts yoki uzunligini tanlang:`,
       reply_markup: lengthKeyboard(type),
     });
   } else if (kind === "back") {
     await tg(env, "editMessageText", { chat_id, message_id, text: `${head}\n\nTurini tanlang:`, reply_markup: typeKeyboard() });
   } else if (kind === "go") {
     try {
-      await createVideo(env, { topic, type, length, reference });
+      const short = length === "short";
+      await createVideo(env, { topic, type, length, reference, format: short ? "short" : "long" });
       await tg(env, "editMessageText", {
         chat_id, message_id,
-        text: `${head}\nTuri: ${TYPES[type]} · ${length} daqiqa\n\n✅ Buyurtma qabul qilindi! Tayyor bo'lganda xabar beraman.`,
+        text: `${head}\nTuri: ${TYPES[type]} · ${short ? "Shorts" : `${length} daqiqa`}\n\n✅ Buyurtma qabul qilindi! Tayyor bo'lganda xabar beraman.`,
       });
     } catch (e) {
       await tg(env, "editMessageText", { chat_id, message_id, text: `${head}\n\n❌ Xato: ${e.message}` });

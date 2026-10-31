@@ -1,11 +1,14 @@
-# Har kuni bolalar videosini yaratib, YouTube kanalga yuklaydi.
+# Har kuni 1 ta uzun video va 3 ta Shorts yaratib, YouTube kanalga yuklaydi.
 # Qo'lda ishga tushirish: GitHub → Actions → "Daily kids video" → Run workflow
 name: Daily kids video
-run-name: ${{ github.event_name == 'schedule' && 'Kunlik video (avto)' || format('{0} · {1} daq · {2}', inputs.type, inputs.length, inputs.topic || (inputs.reference && 'namuna asosida') || 'AI mavzu tanlaydi') }}
+run-name: ${{ github.event_name == 'schedule' && (github.event.schedule == '0 14 * * *' && 'Kunlik uzun video (avto)' || 'Kunlik Shorts (avto)') || format('{0} · {1} · {2}', inputs.format == 'short' && 'Shorts' || format('{0} daq', inputs.length || '3'), inputs.type, inputs.topic || (inputs.reference && 'namuna asosida') || 'AI mavzu tanlaydi') }}
 
 on:
   schedule:
-    - cron: "0 14 * * *" # har kuni 14:00 UTC (Toshkent 19:00, AQSh sharqi 10:00)
+    - cron: "0 14 * * *" # uzun video: 14:00 UTC (Toshkent 19:00, AQSh sharqi 10:00)
+    - cron: "0 6 * * *" # Shorts: Toshkent 11:00
+    - cron: "0 10 * * *" # Shorts: Toshkent 15:00
+    - cron: "0 18 * * *" # Shorts: Toshkent 23:00 (AQSh kunduzi)
   workflow_dispatch:
     inputs:
       topic:
@@ -14,14 +17,19 @@ on:
       reference:
         description: "Namuna YouTube havolasi (ixtiyoriy) — shu formatda original video"
         default: ""
+      format:
+        description: "Format"
+        type: choice
+        options: [long, short]
+        default: long
       type:
         description: "Video turi"
         type: choice
         options: [auto, story, education, facts, cartoon, games]
         default: auto
       length:
-        description: "Uzunligi (daqiqa)"
-        default: "3"
+        description: "Uzunligi, daqiqa (bo'sh: uzun = 3, Shorts = ~45 soniya)"
+        default: ""
       privacy:
         description: "YouTube holati"
         type: choice
@@ -40,10 +48,6 @@ on:
 
 permissions:
   contents: write # topics_used.json ni saqlash uchun
-
-concurrency:
-  group: daily-video
-  cancel-in-progress: false
 
 jobs:
   video:
@@ -91,14 +95,16 @@ jobs:
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           POLLINATIONS_KEY: ${{ secrets.POLLINATIONS_KEY }}
           VIDEO_TYPE: ${{ inputs.type || vars.VIDEO_TYPE || 'auto' }}
-          VIDEO_LENGTH: ${{ inputs.length || vars.VIDEO_LENGTH || '3' }}
+          VIDEO_FORMAT: ${{ inputs.format || (github.event.schedule == '0 14 * * *' && 'long') || 'short' }}
+          VIDEO_LENGTH: ${{ inputs.length || vars.VIDEO_LENGTH || '' }}
           VIDEO_PRIVACY: ${{ inputs.privacy || vars.YOUTUBE_PRIVACY || 'public' }}
           VIDEO_TOPIC: ${{ inputs.topic }}
           VIDEO_REFERENCE: ${{ inputs.reference }}
           VIDEO_VOICE: ${{ inputs.voice || vars.VIDEO_VOICE || 'en-US-JennyNeural' }}
           VIDEO_STYLE: ${{ inputs.style || vars.VIDEO_STYLE || 'auto' }}
         run: |
-          args=(--type "$VIDEO_TYPE" --length "$VIDEO_LENGTH" --privacy "$VIDEO_PRIVACY" --voice "$VIDEO_VOICE" --style "$VIDEO_STYLE")
+          args=(--format "$VIDEO_FORMAT" --type "$VIDEO_TYPE" --privacy "$VIDEO_PRIVACY" --voice "$VIDEO_VOICE" --style "$VIDEO_STYLE")
+          if [ -n "$VIDEO_LENGTH" ] && [ "$VIDEO_FORMAT" = "long" ]; then args+=(--length "$VIDEO_LENGTH"); fi
           if [ -n "$VIDEO_TOPIC" ]; then args+=(--topic "$VIDEO_TOPIC"); fi
           if [ -n "$VIDEO_REFERENCE" ]; then args+=(--reference "$VIDEO_REFERENCE"); fi
           python -W ignore main.py "${args[@]}"

@@ -114,5 +114,16 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Video yasalayotganda repoga boshqa commit tushgan bo'lishi mumkin — eng so'nggisiga birlashtiramiz
+          git fetch -q origin main
+          git show origin/main:topics_used.json > /tmp/remote_topics.json
+          python - <<'EOF'
+          import json
+          remote = json.load(open("/tmp/remote_topics.json"))
+          local = json.load(open("topics_used.json"))
+          merged = remote + [t for t in local if t not in remote]
+          json.dump(merged, open("topics_used.json", "w"), indent=2, ensure_ascii=False)
+          EOF
+          git reset -q --soft origin/main
           git add topics_used.json
-          git diff --cached --quiet || (git commit -m "Mavzular ro'yxati yangilandi [skip ci]" && git push)
+          git diff --cached --quiet || (git commit -m "Mavzular ro'yxati yangilandi [skip ci]" && git push origin HEAD:main)

@@ -40,7 +40,10 @@ For EVERY scene also add:
   "cast": 1-3 characters on screen, each {"name": exact name from the cast list, "position": "left" | "center" | "right",
           "action": one of %s},
   "speaker": name of the character who talks in this scene, or "narrator",
-  "effect": animated ambience that fits the place and mood, one of %s (stars only at night, snow only in winter).
+  "effect": animated ambience that fits the place and mood, one of %s (stars only at night, snow only in winter),
+  "props": objects from the props list visible in this scene (or []), each {"name": exact prop name, "position": "left" | "center" | "right",
+           "action": one of ["drive_across", "roll", "float", "bounce", "idle"]}.
+Props are drawn separately: keep them OUT of background_prompt.
 Choose actions that match the story (walk_in when arriving, hop when happy, wave when greeting, peek when shy or hiding).""" % (
     CARTOON_ACTIONS, SCENE_EFFECTS)
 
@@ -68,6 +71,21 @@ class ScriptWriter:
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
         )
         return json.loads(resp.choices[0].message.content)
+
+    def analyze_reference(self, reference):
+        """Namunaning muqovasi va ma'lumotlaridan g'oyasini aniqlaydi (video matnini YouTube bloklaydi)."""
+        content = [{"type": "text", "text": f"""This is a kids YouTube video the creator likes:
+{reference_text(reference)}
+Describe its IDEA so we can make our own original episode inspired by it.
+Return JSON: {{"idea": one sentence, "theme": short, "setting": where it happens,
+  "format": how it is told (song, story, race, learning...), "fun_objects": list of toys/vehicles/objects that make it fun}}"""}]
+        if reference.get("thumbnail"):
+            content.append({"type": "image_url", "image_url": {"url": reference["thumbnail"]}})
+        resp = self.client.chat.completions.create(
+            model=self.model, temperature=0.3, response_format={"type": "json_object"},
+            messages=[{"role": "user", "content": content}])
+        reference["analysis"] = json.loads(resp.choices[0].message.content)
+        return reference["analysis"]
 
     def pick_type(self, reference):
         """Namuna video uchun eng mos turni tanlaydi."""
@@ -101,8 +119,9 @@ Return JSON: {{"type": one of {list(TYPE_GUIDES)}}}""",
         if reference:
             # Formatni o'rganamiz, mazmunni ko'chirmaymiz (mualliflik huquqi)
             ref = f"""
-The creator likes this reference video. Study its FORMAT only: hook, pacing, structure, tone, type of humor, how it talks to kids.
-Make a NEW ORIGINAL video in the same format. Do NOT copy its story, characters, names, songs or sentences.
+The creator likes this reference video. Take its general IDEA, theme, setting and format, and make a NEW ORIGINAL
+episode {"with OUR series characters" if series else "of your own"}. Do NOT copy its story beats, characters, names,
+songs, catchphrases or sentences. You may add fun objects like toy cars, carts, trains or balloons if they fit the idea.
 Reference:
 {reference_text(reference)}
 """
@@ -129,8 +148,10 @@ Reference:
                      f"Gentle and never scary — nobody is ever hurt or in real danger. "
                      f"Today is {datetime.now():%B %d}.\nMain characters (use 2-4 of them, keep their personalities, "
                      f"do NOT invent new main characters; tiny side characters like a butterfly are fine):\n{roster}")
-        cast_field = ('\n  "cast": list of 2-3 main characters, each {{"name": short name, "look": full visual description '
-                      '(species, colors, clothes, accessories)}},') if cartoon else ""
+        props_field = ('\n  "props": 0-2 fun objects that appear in the episode (toy car, cart, train, ball, balloon...), '
+                       'each {"name": short name, "look": visual description},') if cartoon else ""
+        cast_field = ('\n  "cast": list of 2-3 main characters, each {"name": short name, "look": full visual description '
+                      '(species, colors, clothes, accessories)},') if cartoon else ""
         if series:
             cast_field = f'\n  "cast": list of the character names used in this episode, chosen from {json.dumps(names)},'
         outline = self._ask(
@@ -142,7 +163,7 @@ Return JSON:
   "title": catchy YouTube title under 70 characters,
   "description": YouTube description, 2-3 short paragraphs, kid and parent friendly,
   "tags": list of 10-15 tags,
-  "characters": visual description of the main characters (species, colors, clothes) to keep images consistent, or "" if none,{cast_field}
+  "characters": visual description of the main characters (species, colors, clothes) to keep images consistent, or "" if none,{cast_field}{props_field}
   "parts": list of exactly {n_parts} objects {{"summary": what happens or is taught in this part}}}}""",
         )
 
@@ -184,8 +205,9 @@ Return JSON:
                 rules += "\nimage_prompt: vertical portrait composition, subject in the center."
             if cartoon:
                 names = [c["name"] for c in outline.get("cast", [])]
-                rules += f"\n{CARTOON_FORMAT}\nCast list: {json.dumps(names)}"
-                example = example[:-1] + ', "background_prompt": "...", "cast": [{"name": "...", "position": "left", "action": "hop"}], "speaker": "...", "effect": "sparkles"}' 
+                props = [p["name"] for p in outline.get("props") or []]
+                rules += f"\n{CARTOON_FORMAT}\nCast list: {json.dumps(names)}\nProps list: {json.dumps(props)}"
+                example = example[:-1] + ', "background_prompt": "...", "cast": [{"name": "...", "position": "left", "action": "hop"}], "speaker": "...", "effect": "sparkles", "props": []}' 
             data = self._ask_scenes(games, has_intro, has_outro,
                 SAFETY_RULES,
                 f"""Video title: {outline["title"]}
@@ -245,6 +267,8 @@ def reference_text(ref):
              f"Duration: {ref.get('minutes', '?')} min",
              f"Description: {ref.get('description', '')[:1500]}",
              f"Tags: {', '.join(ref.get('tags', [])[:20])}"]
+    if ref.get("analysis"):
+        parts.append(f"Idea analysis (from title, description and thumbnail): {json.dumps(ref['analysis'])}")
     if ref.get("transcript"):
         parts.append(f"Transcript (beginning): {ref['transcript'][:4000]}")
     return "\n".join(parts)

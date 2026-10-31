@@ -46,5 +46,7 @@ def fetch(url):
         "description": sn.get("description", ""),
         "tags": sn.get("tags", []),
         "minutes": _minutes(items[0]["contentDetails"]["duration"]),
+        "thumbnail": next((sn["thumbnails"][k]["url"] for k in ("maxres", "high", "medium", "default")
+                           if k in sn.get("thumbnails", {})), None),
         "transcript": _transcript(vid),
     }

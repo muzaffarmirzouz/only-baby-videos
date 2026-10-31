@@ -149,7 +149,8 @@ async function handleUpdate(update, env, origin) {
         text:
           "👋 Only Baby Studio\n\n" +
           "• Mavzuni shunchaki yozing — video yasayman\n" +
-          "• YouTube havolasini yuboring — shu formatda original video\n" +
+          "• YouTube havolasini yuboring — g'oyasi asosida bizning qahramonlar bilan video\n" +
+          "   (istak qo'shsa bo'ladi: havola + \"mashinachalar qo'sh\")\n" +
           "• /new — yangi video (AI mavzu tanlaydi)\n" +
           "• /status — oxirgi videolar holati\n" +
           "• 🎬 Studio — to'liq panel\n\n" +
@@ -169,9 +170,11 @@ async function handleUpdate(update, env, origin) {
     // YouTube havola → namuna asosida video
     const link = text.match(YT_RE);
     if (link) {
+      // Havoladan tashqari yozilgan matn — istak (masalan "mashinachalar qo'sh")
+      const wish = text.replace(link[0], "").replace(/^\/new/, "").trim().slice(0, 200);
       return tg(env, "sendMessage", {
         chat_id,
-        text: `🔗 Shu formatda original video\nNamuna: ${link[0]}\nMavzu: ${NO_TOPIC}\n\nTurini tanlang (Avto — namunaga mos):`,
+        text: `🔗 Shu g'oya asosida bizning qahramonlar bilan yangi video\nNamuna: ${link[0]}\nMavzu: ${wish || NO_TOPIC}\n\nTurini tanlang (Avto — multik):`,
         reply_markup: typeKeyboard(),
         link_preview_options: { is_disabled: true },
       });
@@ -196,7 +199,7 @@ async function handleUpdate(update, env, origin) {
   const topic = topicFrom(cq.message.text);
   const reference = referenceFrom(cq.message.text);
   const head = reference
-    ? `🔗 Shu formatda original video\nNamuna: ${reference}\nMavzu: ${topic || NO_TOPIC}`
+    ? `🔗 Shu g'oya asosida bizning qahramonlar bilan yangi video\nNamuna: ${reference}\nMavzu: ${topic || NO_TOPIC}`
     : `🎬 Yangi video\nMavzu: ${topic || NO_TOPIC}`;
   const [kind, type, length] = cq.data.split(":");
 

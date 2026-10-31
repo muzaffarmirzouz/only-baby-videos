@@ -98,7 +98,7 @@ def main():
     cfg = yaml.safe_load((ROOT / "config.yaml").read_text())
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--type", choices=["auto", *VIDEO_TYPES], default="story",
+    ap.add_argument("--type", choices=["auto", *VIDEO_TYPES], default="auto",
                     help="auto = kun bo'yicha navbat bilan (namuna berilsa — namunaga mos tur)")
     ap.add_argument("--format", choices=["long", "short"], default="long",
                     help="long = oddiy gorizontal video, short = YouTube Shorts (tik, ~45 soniya)")
@@ -131,8 +131,13 @@ def main():
             from pipeline import reference
             ref = reference.fetch(args.reference)
             print(f"  Namuna: {ref['title']} ({ref['channel']}, {ref['minutes']} daq)")
+            print(f"  G'oya: {writer.analyze_reference(ref).get('idea', '?')}")
         if args.type == "auto":
-            args.type = writer.pick_type(ref) if ref else auto_type()
+            # Mavzu (prompt) yoki namuna berilsa — o'z qahramonlarimiz bilan multik
+            if (ref or args.topic) and load_series():
+                args.type = "cartoon"
+            else:
+                args.type = writer.pick_type(ref) if ref else auto_type()
         print(f"[1/5] Ssenariy yozilmoqda ({args.type}, {args.length} daqiqa)...")
         script = writer.write(args.type, args.length, args.topic, load_topics(), reference=ref,
                               short=args.format == "short", series=load_series())
@@ -220,12 +225,28 @@ def main():
             print(f"  ! qahramonlarni chizib bo'lmadi ({e}) — oddiy rasmlar ishlatiladi")
             sprites = {}
 
+    # Rekvizitlar (mashinacha, aravacha, shar...) — epizod uchun bir marta, fonsiz chiziladi
+    prop_sprites = {}
+    if sprites and premium:
+        for pr in script.get("props") or []:
+            path = workdir / f"prop_{slug(pr['name'])}.png"
+            try:
+                if not path.exists():
+                    premium.sprite(pr["look"], style, path, obj=True)
+                prop_sprites[pr["name"]] = path
+            except Exception as e:
+                print(f"  ! {pr['name']} chizilmadi ({e})")
+
     def puppets_for(scene):
         cast = [c for c in scene.get("cast") or [] if c.get("name") in sprites][:3]
         return [{"src": sprites[c["name"]],
                  "position": c.get("position") if c.get("position") in ("left", "center", "right") else "center",
                  "action": c.get("action") or "idle",
-                 "speaking": c["name"] == scene.get("speaker")} for c in cast]
+                 "speaking": c["name"] == scene.get("speaker")} for c in cast] + [
+                {"src": prop_sprites[pr["name"]],
+                 "position": pr.get("position") if pr.get("position") in ("left", "center", "right") else "center",
+                 "action": pr.get("action") or "idle", "speaking": False, "prop": True}
+                for pr in (scene.get("props") or [])[:2] if pr.get("name") in prop_sprites]
 
     scenes = []
     n = len(script["scenes"])

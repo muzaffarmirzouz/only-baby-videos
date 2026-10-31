@@ -31,7 +31,7 @@ type Quiz = {
   answerAudio: string;
 };
 // Multik qahramoni: fonsiz PNG, Remotion'da harakatlantiriladi
-type Puppet = { src: string; position: "left" | "center" | "right"; action: string; speaking: boolean };
+type Puppet = { src: string; position: "left" | "center" | "right"; action: string; speaking: boolean; prop?: boolean };
 type Scene = {
   quiz?: Quiz | null;
   puppets?: Puppet[];
@@ -215,7 +215,14 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
       {[...(showPuppets ? scene.puppets! : []).map((pp, k) => ({ pp, k }))]
         .sort((a, b) => Number(b.pp.position === "center") - Number(a.pp.position === "center"))
         .map(({ pp, k }) => (
-          <PuppetView key={k} puppet={pp} index={k} count={scene.puppets!.length} vertical={vertical} lookAtX={speakerX} />
+          <PuppetView
+            key={k}
+            puppet={pp}
+            index={k}
+            count={scene.puppets!.filter((x) => !x.prop).length}
+            vertical={vertical}
+            lookAtX={speakerX}
+          />
         ))}
        </AbsoluteFill>
       </AbsoluteFill>
@@ -439,7 +446,9 @@ const PuppetView: React.FC<{
   const delay = index * 6; // qahramonlar ketma-ket chiqadi
   const f = Math.max(0, frame - delay);
   // Tik ekranda qahramonlar ko'p bo'lsa kichikroq va chetroqda — bir-birini to'smasin
-  const { x: baseX, h, groundY } = puppetLayout(puppet.position, count, vertical, width, height);
+  const layout = puppetLayout(puppet.position, Math.max(1, count), vertical, width, height);
+  const { x: baseX, groundY } = layout;
+  const h = layout.h * (puppet.prop ? 0.45 : 1); // narsalar (mashinacha, shar) qahramonlardan kichik
   // Gapirmayotganlar gapiruvchiga qaraydi; aks holda markazga
   const faceLeft =
     !puppet.speaking && lookAtX !== null ? lookAtX < baseX - 5 : puppet.position === "right";
@@ -454,7 +463,21 @@ const PuppetView: React.FC<{
   let flip = faceLeft ? -1 : 1;
   let scale = pop;
 
-  switch (puppet.action) {
+  switch (puppet.prop && puppet.action === "drive_across" ? "run_across" : puppet.action) {
+    case "roll": {
+      // koptok/g'ildirak: dumalab o'tadi
+      const fromLeft = puppet.position !== "right";
+      const k = (f / (durationInFrames * 0.9)) % 1;
+      x = fromLeft ? -width * 0.1 + k * width * 1.2 : width * 1.1 - k * width * 1.2;
+      rot = (fromLeft ? 1 : -1) * t * 360;
+      scale = 1;
+      break;
+    }
+    case "float":
+      // shar: sekin yuqoriga ko'tariladi va chayqaladi
+      y = h * 0.4 + Math.sin(t * 1.5 + seed) * h * 0.1 + Math.min(f / fps, 4) * h * 0.08;
+      rot = Math.sin(t * 1.2 + seed) * 6;
+      break;
     case "walk_in":
     case "run_across": {
       const across = puppet.action === "run_across";
@@ -465,8 +488,8 @@ const PuppetView: React.FC<{
       const k = interpolate(f, [0, dur], [0, 1], { extrapolateRight: "clamp" });
       const walking = k < 1;
       x = start + (end - start) * (across ? k : 1 - Math.pow(1 - k, 2));
-      y = walking ? Math.abs(Math.sin(t * (across ? 14 : 10))) * h * 0.05 : 0;
-      rot = walking ? Math.sin(t * (across ? 14 : 10)) * 4 : 0;
+      y = walking ? Math.abs(Math.sin(t * (across ? 14 : 10))) * h * (puppet.prop ? 0.015 : 0.05) : 0;
+      rot = walking ? Math.sin(t * (across ? 14 : 10)) * (puppet.prop ? 1 : 4) : 0;
       flip = fromLeft ? 1 : -1;
       scale = 1;
       break;

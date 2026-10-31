@@ -50,11 +50,15 @@ class Premium:
             self.cost += (r.usage.input_tokens * p["text_in"] + r.usage.output_tokens * p["image_out"]) / 1e6
         return True
 
-    def sprite(self, look, style, out_path):
-        """Multik qahramoni — fonsiz (shaffof PNG), butun bo'yi bilan. gpt-image-2 shaffof fonni qo'llamaydi."""
+    def sprite(self, look, style, out_path, obj=False):
+        """Multik qahramoni yoki narsa (obj=True) — fonsiz shaffof PNG. gpt-image-2 shaffof fonni qo'llamaydi."""
         model = self.cfg["sprite_model"]
-        prompt = (f"Full body character, standing, facing slightly right, cheerful pose: {look}. "
-                  f"Style: {style}. Isolated single character, transparent background, no ground, no shadow, no text.")
+        if obj:
+            prompt = (f"A single toy-like object, side view facing right, whole object visible: {look}. "
+                      f"Style: {style}. Isolated object, nobody in it, transparent background, no ground, no shadow, no text.")
+        else:
+            prompt = (f"Full body character, standing, facing slightly right, cheerful pose: {look}. "
+                      f"Style: {style}. Isolated single character, transparent background, no ground, no shadow, no text.")
         r = self.client.images.generate(model=model, prompt=prompt, size="1024x1536", quality=self.cfg["image_quality"],
                                         background="transparent", output_format="png", n=1)
         img = Image.open(io.BytesIO(base64.b64decode(r.data[0].b64_json))).convert("RGBA")

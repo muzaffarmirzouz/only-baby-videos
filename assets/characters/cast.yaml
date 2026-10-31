@@ -1,0 +1,39 @@
+# "Only Baby & Friends" seriali — doimiy qahramonlar (kanal logosidan).
+# Rasmlar bir marta chizilgan (fonsiz PNG) va har bir multikda qayta ishlatiladi.
+series: Only Baby & Friends
+
+# Fon rasmlari uslubi — logoga mos
+style: >-
+  soft glossy 3D cartoon render like a modern kids animated series, bright warm colors,
+  rounded cute shapes, gentle lighting, cheerful, no text
+
+characters:
+  - name: Baby Leo
+    image: baby.png
+    look: a smiling baby boy with brown messy hair, big brown eyes, cream pajamas with yellow stars and blue collar
+    personality: curious and cheerful, loves learning new things and asking "why?"
+  - name: Bella
+    image: bunny.png
+    look: a small white fluffy bunny with pink inner ears and big blue eyes
+    personality: smart and kind, always has a good idea and helps her friends
+  - name: Bobo
+    image: teddy.png
+    look: a brown teddy bear with a red bow tie
+    personality: funny and cuddly, loves snacks, a little bit shy but very brave when friends need him
+  - name: Twinkle
+    image: star.png
+    look: a smiling glossy yellow star with tiny arms and legs
+    personality: magical and sparkly, takes the friends on adventures and can glow in the dark
+
+# Har epizod shulardan biri (tasodifiy)
+genres:
+  - a fun adventure to a new place
+  - a funny comedy where a small mistake turns into laughter
+  - a friendship lesson (sharing, kindness, saying sorry, teamwork)
+  - a learning episode (counting, colors, shapes, letters or animals) told as a story
+  - a calm bedtime episode under the stars
+  - a nature exploration (garden, forest, beach, snow)
+  - sports and playground games
+  - music and dance party
+  - a gentle mystery (a lost toy, a strange sound) solved together
+  - a holiday or season episode that fits the current month

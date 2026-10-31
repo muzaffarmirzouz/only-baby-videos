@@ -53,6 +53,14 @@ def auto_type():
     return options[day % len(options)]
 
 
+CHARACTERS_DIR = ROOT / "assets" / "characters"
+
+
+def load_series():
+    f = CHARACTERS_DIR / "cast.yaml"
+    return yaml.safe_load(f.read_text()) if f.exists() else None
+
+
 def slug(text):
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40]
 
@@ -99,7 +107,7 @@ def main():
             args.type = writer.pick_type(ref) if ref else auto_type()
         print(f"[1/5] Ssenariy yozilmoqda ({args.type}, {args.length} daqiqa)...")
         script = writer.write(args.type, args.length, args.topic, load_topics(), reference=ref,
-                              short=args.format == "short")
+                              short=args.format == "short", series=load_series())
         if ref:
             script["reference"] = ref["url"]
 
@@ -115,7 +123,11 @@ def main():
     short = script.get("format") == "short"
     if short:
         vcfg["width"], vcfg["height"] = 1080, 1920
-    style = cfg["cartoon_style"] if script.get("type") == "cartoon" else cfg["image_style"]
+    series = load_series()
+    if script.get("type") == "cartoon":
+        style = series["style"] if series and script.get("series") else cfg["cartoon_style"]
+    else:
+        style = cfg["image_style"]
     characters = script.get("characters") or ""
     base_seed = random.randint(1, 10**8)  # ketma-ket seed — rasmlar uslubi izchilroq
     pixabay = stock.Pixabay(vertical=short)
@@ -164,10 +176,14 @@ def main():
 
     # Multik: qahramonlar bir marta, fonsiz chiziladi va har sahnada harakatlantiriladi
     sprites = {}
-    if premium and script.get("type") == "cartoon" and script.get("cast"):
+    if script.get("type") == "cartoon" and script.get("cast") and (
+            premium or all(c.get("image") for c in script["cast"])):  # doimiy qahramonlar tekin rejimda ham
         print(f"  Qahramonlar chizilmoqda: {', '.join(c['name'] for c in script['cast'])}")
         try:
             for c in script["cast"]:
+                if c.get("image") and (CHARACTERS_DIR / c["image"]).exists():
+                    sprites[c["name"]] = CHARACTERS_DIR / c["image"]  # serialning doimiy qahramoni
+                    continue
                 path = workdir / f"sprite_{slug(c['name'])}.png"
                 if not path.exists():
                     premium.sprite(c["look"], style, path)
@@ -201,10 +217,13 @@ def main():
             clip_dur = None
         elif puppets:
             clip_dur = None
+            bg_prompt = (f"{scene['background_prompt']}. Empty background scene with NO characters, animals or "
+                         f"people, room in the lower half for characters to stand. Style: {style}")
             try:
-                premium.image(f"{scene['background_prompt']}. Empty background scene with NO characters, animals or "
-                              f"people, room in the lower half for characters to stand. Style: {style}",
-                              img, vcfg["width"], vcfg["height"])
+                if premium:
+                    premium.image(bg_prompt, img, vcfg["width"], vcfg["height"])
+                elif not images.generate(bg_prompt, img, vcfg["width"], vcfg["height"], seed=base_seed + i):
+                    raise RuntimeError("tekin rasm xizmati javob bermadi")
             except Exception as e:
                 print(f"  ! fon chizilmadi ({e}) — oddiy rasm")
                 puppets = []

@@ -199,9 +199,12 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
           />
         )}
       </AbsoluteFill>
-      {scene.puppets?.map((pp, k) => (
-        <PuppetView key={k} puppet={pp} index={k} vertical={vertical} />
-      ))}
+      {/* o'rtadagi qahramon orqada (birinchi chiziladi), chetdagilar oldinda */}
+      {[...(scene.puppets ?? []).map((pp, k) => ({ pp, k }))]
+        .sort((a, b) => Number(b.pp.position === "center") - Number(a.pp.position === "center"))
+        .map(({ pp, k }) => (
+          <PuppetView key={k} puppet={pp} index={k} count={scene.puppets!.length} vertical={vertical} />
+        ))}
       <Audio src={staticFile(scene.audio)} />
       {caption ? (
         <AbsoluteFill
@@ -368,14 +371,23 @@ const QuizScene: React.FC<{ scene: Scene; quiz: Quiz; vertical: boolean }> = ({ 
 
 const POS_X = { left: 0.25, center: 0.5, right: 0.75 };
 
-const PuppetView: React.FC<{ puppet: Puppet; index: number; vertical: boolean }> = ({ puppet, index, vertical }) => {
+const PuppetView: React.FC<{ puppet: Puppet; index: number; count: number; vertical: boolean }> = ({
+  puppet,
+  index,
+  count,
+  vertical,
+}) => {
   const frame = useCurrentFrame();
   const { fps, width, height, durationInFrames } = useVideoConfig();
   const t = frame / fps;
   const delay = index * 6; // qahramonlar ketma-ket chiqadi
   const f = Math.max(0, frame - delay);
-  const h = height * (vertical ? 0.42 : 0.62);
-  const baseX = width * POS_X[puppet.position];
+  // Tik ekranda qahramonlar ko'p bo'lsa kichikroq va chetroqda — bir-birini to'smasin
+  const center = puppet.position === "center";
+  const crowd = vertical ? (count >= 3 ? 0.33 : count === 2 ? 0.38 : 0.42) : count >= 3 ? 0.56 : 0.62;
+  const h = height * crowd * (center && count >= 3 ? 0.9 : 1);
+  const spread = vertical && count >= 2 ? { left: 0.2, center: 0.5, right: 0.8 } : POS_X;
+  const baseX = width * spread[puppet.position];
   const faceLeft = puppet.position === "right"; // o'ngdagilar markazga qaraydi
   const pop = spring({ frame: f, fps, config: { damping: 10, mass: 0.6 } });
   const seed = index * 1.7;
@@ -440,7 +452,7 @@ const PuppetView: React.FC<{ puppet: Puppet; index: number; vertical: boolean }>
     rot += Math.sin(t * 7) * 1.5;
   }
 
-  const groundY = height * 0.97;
+  const groundY = height * (center && count >= 3 ? 0.93 : 0.97); // o'rtadagi biroz orqada
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
       {/* soya */}

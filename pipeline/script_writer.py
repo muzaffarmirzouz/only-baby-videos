@@ -1,6 +1,8 @@
 """OpenAI orqali bolalar videosi ssenariysini yozish."""
 import json
 import math
+import random
+from datetime import datetime
 
 from openai import OpenAI
 
@@ -75,8 +77,10 @@ Return JSON: {{"type": one of {list(TYPE_GUIDES)}}}""",
         )
         return data.get("type") if data.get("type") in TYPE_GUIDES else "story"
 
-    def write(self, video_type, minutes, topic=None, avoid_topics=(), reference=None, short=False):
+    def write(self, video_type, minutes, topic=None, avoid_topics=(), reference=None, short=False, series=None):
+        """series: doimiy qahramonlar (assets/characters/cast.yaml) — multik shu qahramonlar bilan yoziladi."""
         games = video_type == "games"
+        series = series if video_type == "cartoon" else None
         wps = SHORT_WORDS_PER_SCENE if short else self.wps
         if short:
             # Shorts: tez sahnalar; o'yinda 1 gaplik kirish + 2 ta savol
@@ -101,11 +105,22 @@ Reference:
 """
         fmt = SHORT_GUIDE if short else ""
         cartoon = video_type == "cartoon"
+        guide = TYPE_GUIDES[video_type]
+        if series:
+            genre = random.choice(series["genres"])
+            roster = "\n".join(f"- {c['name']}: {c['look']}. Personality: {c['personality']}"
+                               for c in series["characters"])
+            names = [c["name"] for c in series["characters"]]
+            guide = (f"An episode of the kids animated series \"{series['series']}\". Genre: {genre}. "
+                     f"Today is {datetime.now():%B %d}.\nMain characters (use 2-4 of them, keep their personalities, "
+                     f"do NOT invent new main characters; tiny side characters like a butterfly are fine):\n{roster}")
         cast_field = ('\n  "cast": list of 2-3 main characters, each {{"name": short name, "look": full visual description '
                       '(species, colors, clothes, accessories)}},') if cartoon else ""
+        if series:
+            cast_field = f'\n  "cast": list of the character names used in this episode, chosen from {json.dumps(names)},'
         outline = self._ask(
             SAFETY_RULES,
-            f"""Plan a {"YouTube Short (vertical, under 60 seconds)" if short else f"{minutes}-minute"} kids video. Type: {TYPE_GUIDES[video_type]}{fmt}{ref}
+            f"""Plan a {"YouTube Short (vertical, under 60 seconds)" if short else f"{minutes}-minute"} kids video. Type: {guide}{fmt}{ref}
 Topic: {topic or "choose a fresh, original topic"}. Do NOT reuse these topics: {avoid}.
 Return JSON:
 {{"topic": short topic name,
@@ -116,6 +131,13 @@ Return JSON:
   "parts": list of exactly {n_parts} objects {{"summary": what happens or is taught in this part}}}}""",
         )
 
+        if series:
+            # Ismlar ro'yxatini to'liq qahramon ma'lumotiga (rasm bilan) almashtiramiz
+            by_name = {c["name"].lower(): c for c in series["characters"]}
+            cast = [by_name[n.lower()] for n in outline.get("cast", []) if isinstance(n, str) and n.lower() in by_name]
+            outline["cast"] = cast or series["characters"][:3]
+            outline["characters"] = "; ".join(f"{c['name']}: {c['look']}" for c in outline["cast"])
+            outline["series"] = series["series"]
         # Model ba'zan so'ralganidan ko'p bo'lim qaytaradi — video uzunligi oshib ketmasin
         outline["parts"] = outline["parts"][:n_parts]
         scenes = []
@@ -169,6 +191,10 @@ Return JSON: {{"scenes": [{example}]}}""",
         outline["type"] = video_type
         outline["minutes"] = minutes
         outline["format"] = "short" if short else "long"
+        if series and series["series"].lower() not in outline["title"].lower():
+            branded = f"{outline['title']} | {series['series']}"
+            if len(branded) <= (85 if short else 100):
+                outline["title"] = branded
         if short and "#shorts" not in outline["title"].lower():
             outline["title"] = f"{outline['title'][:90]} #Shorts"
         return outline

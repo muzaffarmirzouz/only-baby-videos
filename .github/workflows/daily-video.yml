@@ -118,12 +118,14 @@ jobs:
           TITLE: ${{ steps.video.outputs.title }}
           VIDEO_URL: ${{ steps.video.outputs.video_url }}
           THUMB: ${{ steps.video.outputs.thumbnail }}
+          COST: ${{ steps.video.outputs.cost }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then echo "Telegram sozlanmagan"; exit 0; fi
           api="https://api.telegram.org/bot$TG_TOKEN"
           if [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
             caption=$(printf '✅ Yangi video yuklandi!\n\n%s\n%s' "$TITLE" "$VIDEO_URL")
+            if [ -n "$COST" ] && [ "$COST" != "0.00" ]; then caption=$(printf '%s\n\n💰 Rasm va ovoz: ~$%s' "$caption" "$COST"); fi
             if [ -f "$THUMB" ]; then
               curl -s -o /dev/null -F chat_id="$TG_CHAT" -F photo=@"$THUMB" -F caption="$caption" "$api/sendPhoto"
             else

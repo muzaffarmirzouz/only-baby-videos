@@ -17,12 +17,13 @@ from pathlib import Path
 import yaml
 from dotenv import load_dotenv
 
-from pipeline import images, stock, tts, video_builder
+from pipeline import images, premium as premium_mod, stock, tts, video_builder
 
 ROOT = Path(__file__).resolve().parent
 TOPICS_FILE = ROOT / "topics_used.json"
 VIDEO_TYPES = ["story", "education", "facts", "cartoon", "games"]
 QUIZ_COUNTDOWN = 5  # soniya
+PREMIUM_FIRST = {"story", "cartoon", "education"}  # pullik rejimda OpenAI rasmi birinchi
 STYLE_SOURCES = {
     "stock": ["pixabay_video", "pixabay_photo", "pixabay_illustration", "ai"],
     "ai": ["ai", "pixabay_illustration"],
@@ -59,6 +60,7 @@ def main():
     ap.add_argument("--privacy", choices=["private", "unlisted", "public"])
     ap.add_argument("--voice", help="edge-tts ovozi, masalan en-US-AnaNeural (bo'lmasa config.yaml dagisi)")
     ap.add_argument("--reference", help="yoqqan YouTube video havolasi — shu formatda original video yasaladi")
+    ap.add_argument("--free", action="store_true", help="pullik rejimni o'chirish (faqat tekin xizmatlar)")
     ap.add_argument("--style", choices=["auto", "stock", "ai"], default="auto",
                     help="stock = Pixabay video/rasm, ai = AI rasm, auto = config.yaml dagi tartib")
     args = ap.parse_args()
@@ -104,7 +106,17 @@ def main():
     characters = script.get("characters") or ""
     base_seed = random.randint(1, 10**8)  # ketma-ket seed — rasmlar uslubi izchilroq
     pixabay = stock.Pixabay(vertical=short)
+    premium = None
+    if cfg["premium"]["enabled"] and not args.free:
+        premium = premium_mod.Premium(cfg["premium"])
+        print(f"  Pullik rejim: {cfg['premium']['image_model']} rasm + {cfg['premium']['tts_model']} ovoz")
     sources = STYLE_SOURCES.get(args.style) or cfg["media"].get(script.get("type", "story"), ["ai"])
+    if premium:
+        # Pollinations o'rniga OpenAI; chizilgan turlarda OpenAI birinchi
+        sources = ["openai" if s == "ai" else s for s in sources]
+        if script.get("type") in PREMIUM_FIRST and args.style != "stock":
+            sources = ["openai"] + [s for s in sources if s != "openai"]
+        sources.append("ai")  # OpenAI xato bersa — tekin zaxira
     if not pixabay.enabled:
         sources = [s for s in sources if not s.startswith("pixabay")] or ["ai"]
 
@@ -122,6 +134,10 @@ def main():
                         return clip_dur
                 elif src.startswith("pixabay_"):
                     if pixabay.image(query, img, image_type=src.split("_", 1)[1]):
+                        return None
+                elif src == "openai":
+                    prompt = f"{scene['image_prompt']}. Characters: {characters}. Style: {style}"
+                    if premium.image(prompt, img, vcfg["width"], vcfg["height"]):
                         return None
                 elif src == "ai":
                     prompt = f"{scene['image_prompt']}. {characters}. {style}"
@@ -143,7 +159,7 @@ def main():
         if audio.exists():
             dur = tts.audio_duration(audio)
         else:
-            dur = tts.synthesize(scene["narration"], audio, cfg["voice"], cfg["voice_rate"])
+            dur = tts.synthesize(scene["narration"], audio, cfg["voice"], cfg["voice_rate"], premium=premium)
         if clip.exists():
             clip_dur = tts.audio_duration(clip)
         elif img.exists():
@@ -159,7 +175,8 @@ def main():
             if answer_audio.exists():
                 a_dur = tts.audio_duration(answer_audio)
             else:
-                a_dur = tts.synthesize(scene["answer_narration"], answer_audio, cfg["voice"], cfg["voice_rate"])
+                a_dur = tts.synthesize(scene["answer_narration"], answer_audio, cfg["voice"], cfg["voice_rate"],
+                                       premium=premium)
             reveal_at = dur + 0.3 + QUIZ_COUNTDOWN
             item.update({
                 "duration": reveal_at + a_dur,
@@ -184,6 +201,9 @@ def main():
         thumb = workdir / "thumbnail.jpg"
         video_builder.thumbnail(workdir / "img_000.jpg", script["title"], thumb)
     print(f"  Tayyor: {final}  ({tts.audio_duration(final) / 60:.1f} daqiqa)")
+    cost = premium.cost if premium else 0.0
+    if premium:
+        print(f"  Rasm va ovoz xarajati: ~${cost:.2f} (+ ssenariy ~$0.01)")
 
     topics = load_topics()
     topics.append(script.get("topic", script["title"]))
@@ -198,7 +218,7 @@ def main():
     gh_output = os.getenv("GITHUB_OUTPUT")
     if gh_output:  # keyingi qadam (Telegram xabarnomasi) uchun
         with open(gh_output, "a") as f:
-            f.write(f"video_url=https://youtu.be/{vid}\nthumbnail={thumb}\n")
+            f.write(f"video_url=https://youtu.be/{vid}\nthumbnail={thumb}\ncost={cost:.2f}\n")
             f.write(f"title<<__EOT__\n{script['title']}\n__EOT__\n")
     summary = os.getenv("GITHUB_STEP_SUMMARY")
     if summary:

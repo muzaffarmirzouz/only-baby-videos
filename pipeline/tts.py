@@ -14,7 +14,15 @@ def audio_duration(path):
     return float(out.stdout.strip())
 
 
-def synthesize(text, out_path, voice, rate, retries=3):
+def synthesize(text, out_path, voice, rate, retries=3, premium=None):
+    if premium:
+        try:
+            premium.speech(text, out_path, voice)
+            dur = audio_duration(out_path)
+            premium.add_speech_cost(text, dur)
+            return dur
+        except Exception as e:
+            print(f"  ! OpenAI ovozi ishlamadi ({e}), tekin ovozga o'tildi")
     for attempt in range(retries):
         try:
             asyncio.run(edge_tts.Communicate(text, voice, rate=rate).save(str(out_path)))

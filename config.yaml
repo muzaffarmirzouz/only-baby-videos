@@ -38,3 +38,15 @@ media:
   facts: [pixabay_video, pixabay_photo, ai]
   cartoon: [ai, pixabay_illustration]
   games: [pixabay_photo, pixabay_illustration, ai]
+
+# Pullik rejim (OpenAI). enabled: false — hammasi tekin xizmatlarda ishlaydi.
+# OpenAI'da oylik xarajat chegarasini qo'yishni unutmang: platform.openai.com → Settings → Limits
+premium:
+  enabled: true
+  image_model: gpt-image-2      # arzonroq: gpt-image-1-mini
+  image_quality: medium        # low | medium | high
+  tts_model: gpt-4o-mini-tts
+  tts_instructions: >-
+    You are a warm, gentle and playful storyteller for young children.
+    Speak clearly and a little slowly, with lots of expression, smiles and wonder in your voice.
+    Make character lines lively, and slow down for the gentle moral at the end.

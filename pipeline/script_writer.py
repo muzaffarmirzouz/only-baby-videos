@@ -111,10 +111,22 @@ Reference:
         guide = TYPE_GUIDES[video_type]
         if series:
             genre = random.choice(series["genres"])
-            roster = "\n".join(f"- {c['name']}: {c['look']}. Personality: {c['personality']}"
-                               for c in series["characters"])
+            pattern = random.choice(series.get("story_patterns") or ["a small friendly adventure"])
+            # Har epizodda boshqa qahramonlar va boshqa "qutqaruvchi" — hamma navbat bilan chiqadi
+            hero = random.choice(series["characters"])
+            others = random.sample([c for c in series["characters"] if c is not hero], k=random.choice([1, 2]))
+            today = [hero] + others
+            roster = "\n".join(f"- {c['name']}: {c['look']}. Personality: {c['personality']}. "
+                               f"Special skill: {c.get('skill', 'kindness')}" for c in series["characters"])
             names = [c["name"] for c in series["characters"]]
             guide = (f"An episode of the kids animated series \"{series['series']}\". Genre: {genre}. "
+                     f"Story: {pattern}. Characters in this episode: {', '.join(c['name'] for c in today)}. "
+                     f"Today's hero is {hero['name']}: the problem is solved by {hero['name']}'s special skill "
+                     f"({hero.get('skill', 'kindness')}) — show that moment clearly in its own scene. "
+                     f"Structure: a clear small problem in the beginning, a first try that does not work, "
+                     f"the hero's skill saves the day, everyone celebrates, one simple lesson. "
+                     f"The problem MUST be solved before the video ends. "
+                     f"Gentle and never scary — nobody is ever hurt or in real danger. "
                      f"Today is {datetime.now():%B %d}.\nMain characters (use 2-4 of them, keep their personalities, "
                      f"do NOT invent new main characters; tiny side characters like a butterfly are fine):\n{roster}")
         cast_field = ('\n  "cast": list of 2-3 main characters, each {{"name": short name, "look": full visual description '

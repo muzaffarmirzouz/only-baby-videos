@@ -12,18 +12,33 @@ characters:
     image: baby.png
     look: a smiling baby boy with brown messy hair, big brown eyes, cream pajamas with yellow stars and blue collar
     personality: curious and cheerful, loves learning new things and asking "why?"
+    skill: brave explorer — notices small details and never gives up
   - name: Bella
     image: bunny.png
     look: a small white fluffy bunny with pink inner ears and big blue eyes
     personality: smart and kind, always has a good idea and helps her friends
+    skill: clever plans and super fast hopping
   - name: Bobo
     image: teddy.png
     look: a brown teddy bear with a red bow tie
     personality: funny and cuddly, loves snacks, a little bit shy but very brave when friends need him
+    skill: very strong — can lift, push and carry big things, gives the best warm hugs
   - name: Twinkle
     image: star.png
     look: a smiling glossy yellow star with tiny arms and legs
     personality: magical and sparkly, takes the friends on adventures and can glow in the dark
+    skill: can fly, glow to light up the dark and sprinkle a little sparkle magic
+
+# Syujet: har epizod kichik muammo → qahramonning qobiliyati bilan yechim → baxtli yakun (tasodifiy tanlanadi)
+story_patterns:
+  - one friend gets stuck or into a tricky spot (up a tree, in a puddle, behind a door) and another friend rescues them using their special skill
+  - one friend is scared of something (the dark, thunder, a big slide) and the others help them be brave
+  - one friend makes a small mistake (breaks something, forgets something) and they fix it together; saying sorry
+  - a friend loses something important and everyone searches for it together
+  - the friends must work as a team to solve a challenge none of them can do alone
+  - the friends prepare a surprise for someone and something funny goes wrong, but it ends great
+  - a friendly race or game where helping each other matters more than winning
+  - a new little animal friend needs help getting home
 
 # Har epizod shulardan biri (tasodifiy)
 genres:

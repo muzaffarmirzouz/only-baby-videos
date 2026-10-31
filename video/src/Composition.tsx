@@ -7,6 +7,7 @@ import {
   interpolate,
   Loop,
   OffthreadVideo,
+  random,
   Sequence,
   Series,
   spring,
@@ -34,6 +35,7 @@ type Puppet = { src: string; position: "left" | "center" | "right"; action: stri
 type Scene = {
   quiz?: Quiz | null;
   puppets?: Puppet[];
+  effect?: string | null;
   image: string;
   video: string | null;
   videoDuration: number | null;
@@ -148,7 +150,7 @@ const Intro: React.FC<{ title: string; image?: string; vertical: boolean }> = ({
 
 const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; vertical: boolean }> = ({ scene, cartoon, vertical }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps, durationInFrames, width, height } = useVideoConfig();
   const p = frame / durationInFrames;
   // Multik: sahna "sakrab" kiradi va sekin chayqaladi
   const hasPuppets = Boolean(scene.puppets?.length);
@@ -175,9 +177,14 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
   const capStart = caption ? Math.round(caption.start * fps) : 0;
   const pop = spring({ frame: frame - capStart, fps, config: { damping: 12 } });
 
+  const cam = hasPuppets ? cameraAt(frame, fps, scene.puppets!, vertical, width, height) : { z: 1, x: 0, y: 0 };
+  const speaker = scene.puppets?.find((pp) => pp.speaking);
+  const speakerX = speaker ? puppetLayout(speaker.position, scene.puppets!.length, vertical, width, height).x : null;
+
   return (
     <AbsoluteFill style={{ opacity }}>
       <AbsoluteFill style={{ overflow: "hidden" }}>
+       <AbsoluteFill style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.z})` }}>
         {scene.video && scene.videoDuration ? (
           // Pixabay klipi: sahnadan qisqa bo'lsa takrorlanadi, o'z ovozi o'chirilgan
           <Loop durationInFrames={Math.max(1, Math.floor(scene.videoDuration * fps) - 1)}>
@@ -198,13 +205,15 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
             }}
           />
         )}
-      </AbsoluteFill>
       {/* o'rtadagi qahramon orqada (birinchi chiziladi), chetdagilar oldinda */}
       {[...(scene.puppets ?? []).map((pp, k) => ({ pp, k }))]
         .sort((a, b) => Number(b.pp.position === "center") - Number(a.pp.position === "center"))
         .map(({ pp, k }) => (
-          <PuppetView key={k} puppet={pp} index={k} count={scene.puppets!.length} vertical={vertical} />
+          <PuppetView key={k} puppet={pp} index={k} count={scene.puppets!.length} vertical={vertical} lookAtX={speakerX} />
         ))}
+       </AbsoluteFill>
+      </AbsoluteFill>
+      {scene.effect && scene.effect !== "none" ? <Particles effect={scene.effect} /> : null}
       <Audio src={staticFile(scene.audio)} />
       {caption ? (
         <AbsoluteFill
@@ -371,24 +380,63 @@ const QuizScene: React.FC<{ scene: Scene; quiz: Quiz; vertical: boolean }> = ({ 
 
 const POS_X = { left: 0.25, center: 0.5, right: 0.75 };
 
-const PuppetView: React.FC<{ puppet: Puppet; index: number; count: number; vertical: boolean }> = ({
-  puppet,
-  index,
-  count,
-  vertical,
-}) => {
+// Qahramon joylashuvi (PuppetView va kamera uchun bir xil)
+function puppetLayout(position: Puppet["position"], count: number, vertical: boolean, width: number, height: number) {
+  const center = position === "center";
+  const crowd = vertical ? (count >= 3 ? 0.33 : count === 2 ? 0.38 : 0.42) : count >= 3 ? 0.56 : 0.62;
+  const h = height * crowd * (center && count >= 3 ? 0.9 : 1);
+  const spread = vertical && count >= 2 ? { left: 0.2, center: 0.5, right: 0.8 } : POS_X;
+  return { x: width * spread[position], h, groundY: height * (center && count >= 3 ? 0.93 : 0.97) };
+}
+
+// Kamera: ~3 soniyalik kadrlar — umumiy plan → gapiruvchiga yaqin → boshqasiga → o'rta plan
+function cameraAt(frame: number, fps: number, puppets: Puppet[], vertical: boolean, width: number, height: number) {
+  const shotLen = Math.round(fps * 3.2);
+  const shot = Math.floor(frame / shotLen);
+  const shotOf = (n: number) => {
+    if (n === 0) return { z: 1, fx: width / 2, fy: height / 2 };
+    const speaker = puppets.find((pp) => pp.speaking);
+    const others = puppets.filter((pp) => !pp.speaking);
+    const target = n % 2 === 1 ? speaker ?? puppets[n % puppets.length] : others[n % Math.max(1, others.length)];
+    if (!target || n % 3 === 0) return { z: 1.12, fx: width / 2, fy: height * 0.6 };
+    const l = puppetLayout(target.position, puppets.length, vertical, width, height);
+    return { z: vertical ? 1.3 : 1.5, fx: l.x, fy: l.groundY - l.h * 0.6 };
+  };
+  const a = shotOf(Math.max(0, shot - 1));
+  const b = shotOf(shot);
+  // kadrlar orasida tez, silliq o'tish (8 kadr)
+  const k = shot === 0 ? 1 : interpolate(frame - shot * shotLen, [0, 8], [0, 1], { extrapolateRight: "clamp" });
+  const ease = 1 - Math.pow(1 - k, 3);
+  const push = 1 + ((frame % shotLen) / shotLen) * 0.04; // har kadr ichida sekin yaqinlashish
+  const z = (a.z + (b.z - a.z) * ease) * push;
+  const fx = a.fx + (b.fx - a.fx) * ease;
+  const fy = a.fy + (b.fy - a.fy) * ease;
+  const maxX = ((z - 1) * width) / 2;
+  const maxY = ((z - 1) * height) / 2;
+  return {
+    z,
+    x: Math.max(-maxX, Math.min(maxX, -(fx - width / 2) * z)),
+    y: Math.max(-maxY, Math.min(maxY, -(fy - height / 2) * z)),
+  };
+}
+
+const PuppetView: React.FC<{
+  puppet: Puppet;
+  index: number;
+  count: number;
+  vertical: boolean;
+  lookAtX: number | null;
+}> = ({ puppet, index, count, vertical, lookAtX }) => {
   const frame = useCurrentFrame();
   const { fps, width, height, durationInFrames } = useVideoConfig();
   const t = frame / fps;
   const delay = index * 6; // qahramonlar ketma-ket chiqadi
   const f = Math.max(0, frame - delay);
   // Tik ekranda qahramonlar ko'p bo'lsa kichikroq va chetroqda — bir-birini to'smasin
-  const center = puppet.position === "center";
-  const crowd = vertical ? (count >= 3 ? 0.33 : count === 2 ? 0.38 : 0.42) : count >= 3 ? 0.56 : 0.62;
-  const h = height * crowd * (center && count >= 3 ? 0.9 : 1);
-  const spread = vertical && count >= 2 ? { left: 0.2, center: 0.5, right: 0.8 } : POS_X;
-  const baseX = width * spread[puppet.position];
-  const faceLeft = puppet.position === "right"; // o'ngdagilar markazga qaraydi
+  const { x: baseX, h, groundY } = puppetLayout(puppet.position, count, vertical, width, height);
+  // Gapirmayotganlar gapiruvchiga qaraydi; aks holda markazga
+  const faceLeft =
+    !puppet.speaking && lookAtX !== null ? lookAtX < baseX - 5 : puppet.position === "right";
   const pop = spring({ frame: f, fps, config: { damping: 10, mass: 0.6 } });
   const seed = index * 1.7;
 
@@ -442,8 +490,13 @@ const PuppetView: React.FC<{ puppet: Puppet; index: number; count: number; verti
       sx = 1 - Math.sin(t * 5 + seed) * 0.03;
       y = Math.max(0, Math.sin(t * 5 + seed)) * h * 0.04;
       break;
-    default: // idle: nafas olish
+    default: {
+      // idle: nafas olish, tebranish va vaqti-vaqti bilan kichik sakrash
       sy = 1 + Math.sin(t * 2 + seed) * 0.015;
+      rot = Math.sin(t * 1.6 + seed) * 2.5;
+      const ph = (t + seed) % 3.4;
+      if (ph < 0.4) y = Math.sin((Math.PI * ph) / 0.4) * h * 0.07;
+    }
   }
 
   if (puppet.speaking) {
@@ -452,7 +505,6 @@ const PuppetView: React.FC<{ puppet: Puppet; index: number; count: number; verti
     rot += Math.sin(t * 7) * 1.5;
   }
 
-  const groundY = height * (center && count >= 3 ? 0.93 : 0.97); // o'rtadagi biroz orqada
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
       {/* soya */}
@@ -484,3 +536,101 @@ const PuppetView: React.FC<{ puppet: Puppet; index: number; count: number; verti
     </AbsoluteFill>
   );
 };
+
+// Jonli fon effektlari: barglar, qor, uchqunlar, pufakchalar, kapalaklar, gulbarglar, yulduzlar
+const Particles: React.FC<{ effect: string }> = ({ effect }) => {
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
+  const t = frame / fps;
+  const n = { leaves: 16, snow: 45, sparkles: 22, bubbles: 14, butterflies: 4, petals: 20, stars: 30 }[effect] ?? 0;
+  const items = [];
+  for (let i = 0; i < n; i++) {
+    const r = (k: string) => random(`${effect}-${i}-${k}`);
+    const size = (0.6 + r("s") * 0.8) * (vertical(width, height) ? 1.2 : 1);
+    let style: React.CSSProperties = { position: "absolute" };
+    let child: React.ReactNode = null;
+    if (effect === "leaves" || effect === "petals" || effect === "snow") {
+      const speed = effect === "snow" ? 60 + r("v") * 60 : 110 + r("v") * 90;
+      const y = ((r("y") * height + t * speed) % (height + 80)) - 40;
+      const x = r("x") * width + Math.sin(t * (1 + r("w")) + i) * 40;
+      const d = effect === "snow" ? 10 * size : 34 * size;
+      const color =
+        effect === "snow" ? "#ffffff" : effect === "petals" ? ["#ffb6d5", "#ff8fbf", "#ffd1e3"][i % 3] : ["#f28c28", "#e2462f", "#f6c33b", "#c2591b"][i % 4];
+      style = {
+        ...style,
+        left: x,
+        top: y,
+        width: d,
+        height: effect === "snow" ? d : d * 0.6,
+        background: color,
+        borderRadius: effect === "snow" ? "50%" : "0 80% 0 80%",
+        opacity: effect === "snow" ? 0.9 : 0.95,
+        transform: `rotate(${t * 120 * (r("rd") - 0.5) + i * 40}deg)`,
+        boxShadow: effect === "snow" ? "0 0 6px rgba(255,255,255,0.8)" : "none",
+      };
+    } else if (effect === "bubbles") {
+      const speed = 70 + r("v") * 70;
+      const y = height + 60 - ((r("y") * height + t * speed) % (height + 120));
+      const d = 40 + r("s") * 70;
+      style = {
+        ...style,
+        left: r("x") * width + Math.sin(t * 2 + i) * 30,
+        top: y,
+        width: d,
+        height: d,
+        borderRadius: "50%",
+        border: "3px solid rgba(255,255,255,0.8)",
+        background: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.7), rgba(180,220,255,0.15) 60%)",
+      };
+    } else if (effect === "sparkles" || effect === "stars") {
+      const tw = Math.max(0, Math.sin(t * (2 + r("f") * 3) + i * 1.7));
+      const d = (effect === "stars" ? 14 : 38) * size;
+      style = {
+        ...style,
+        left: r("x") * width,
+        top: (effect === "stars" ? r("y") * 0.45 : r("y") * 0.85) * height,
+        width: d,
+        height: d,
+        opacity: tw,
+        transform: `scale(${0.5 + tw * 0.7}) rotate(${t * 40}deg)`,
+      };
+      child = (
+        <svg viewBox="0 0 10 10" width="100%" height="100%">
+          <path d="M5 0 L6 4 L10 5 L6 6 L5 10 L4 6 L0 5 L4 4 Z" fill={effect === "stars" ? "#fff8c4" : "#ffe45c"} />
+        </svg>
+      );
+    } else if (effect === "butterflies") {
+      const speed = 0.06 + r("v") * 0.05;
+      const k = (r("p") + t * speed) % 1.2;
+      const d = 120 * size;
+      const flap = Math.abs(Math.sin(t * 14 + i));
+      style = {
+        ...style,
+        left: -100 + k * (width + 200),
+        top: r("y") * height * 0.6 + Math.sin(t * 2 + i) * 60,
+        width: d,
+        height: d,
+      };
+      const c = ["#ff7ac6", "#7ad0ff", "#ffd36e", "#b68cff"][i % 4];
+      child = (
+        <svg viewBox="0 0 20 20" width="100%" height="100%">
+          <g transform={`translate(10 10) scale(${0.25 + flap * 0.75} 1) translate(-10 -10)`}>
+            <ellipse cx="6" cy="8" rx="5" ry="6" fill={c} />
+            <ellipse cx="14" cy="8" rx="5" ry="6" fill={c} />
+            <ellipse cx="7" cy="14" rx="3" ry="4" fill={c} opacity="0.8" />
+            <ellipse cx="13" cy="14" rx="3" ry="4" fill={c} opacity="0.8" />
+          </g>
+          <rect x="9.4" y="5" width="1.2" height="11" rx="0.6" fill="#4a3a2a" />
+        </svg>
+      );
+    }
+    items.push(
+      <div key={i} style={style}>
+        {child}
+      </div>,
+    );
+  }
+  return <AbsoluteFill style={{ pointerEvents: "none" }}>{items}</AbsoluteFill>;
+};
+
+const vertical = (w: number, h: number) => h > w;

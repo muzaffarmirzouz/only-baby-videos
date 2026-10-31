@@ -55,6 +55,7 @@ def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, con
                 "motion": i % 4,
                 "quiz": {**s["quiz"], "answerAudio": publish(s["quiz"]["answerAudio"])} if s.get("quiz") else None,
                 "puppets": [{**pp, "src": publish(pp["src"])} for pp in s.get("puppets") or []],
+                "effect": s.get("effect"),
             }
             for i, s in enumerate(scenes)
         ],

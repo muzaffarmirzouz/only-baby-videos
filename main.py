@@ -233,7 +233,8 @@ def main():
         item = {"image": img, "audio": audio, "duration": dur,
                 "video": clip if clip_dur else None, "video_duration": clip_dur,
                 "captions": tts.caption_chunks(scene["narration"], dur),
-                "puppets": puppets}
+                "puppets": puppets,
+                "effect": scene.get("effect") if puppets else None}
         if scene.get("quiz"):
             # Savol → taymer → javob: javob ovozi alohida, taymerdan keyin boshlanadi
             answer_audio = workdir / f"answer_{i:03d}.mp3"

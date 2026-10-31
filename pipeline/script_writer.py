@@ -33,13 +33,16 @@ Intro and goodbye scenes have no "quiz" field."""
 
 # Multik: qahramonlar alohida chiziladi va Remotion'da harakatlantiriladi ("qo'g'irchoq" animatsiya)
 CARTOON_ACTIONS = ["walk_in", "run_across", "hop", "wave", "bounce", "spin", "peek", "idle"]
+SCENE_EFFECTS = ["leaves", "snow", "sparkles", "bubbles", "butterflies", "petals", "stars", "none"]
 CARTOON_FORMAT = """This is an animated cartoon: characters are separate puppets moved over a background.
 For EVERY scene also add:
   "background_prompt": the place only, with NO characters or animals in it (e.g. "sunny meadow with a big apple tree and a picnic blanket"),
   "cast": 1-3 characters on screen, each {"name": exact name from the cast list, "position": "left" | "center" | "right",
           "action": one of %s},
-  "speaker": name of the character who talks in this scene, or "narrator".
-Choose actions that match the story (walk_in when arriving, hop when happy, wave when greeting, peek when shy or hiding).""" % CARTOON_ACTIONS
+  "speaker": name of the character who talks in this scene, or "narrator",
+  "effect": animated ambience that fits the place and mood, one of %s (stars only at night, snow only in winter).
+Choose actions that match the story (walk_in when arriving, hop when happy, wave when greeting, peek when shy or hiding).""" % (
+    CARTOON_ACTIONS, SCENE_EFFECTS)
 
 SCENE_SECONDS = {"games": 22}  # savol + 5 soniya taymer + javob
 
@@ -170,7 +173,7 @@ Return JSON:
             if cartoon:
                 names = [c["name"] for c in outline.get("cast", [])]
                 rules += f"\n{CARTOON_FORMAT}\nCast list: {json.dumps(names)}"
-                example = example[:-1] + ', "background_prompt": "...", "cast": [{"name": "...", "position": "left", "action": "hop"}], "speaker": "..."}' 
+                example = example[:-1] + ', "background_prompt": "...", "cast": [{"name": "...", "position": "left", "action": "hop"}], "speaker": "...", "effect": "sparkles"}' 
             data = self._ask_scenes(games, has_intro, has_outro,
                 SAFETY_RULES,
                 f"""Video title: {outline["title"]}

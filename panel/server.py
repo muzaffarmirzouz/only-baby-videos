@@ -5,6 +5,7 @@ Video Mac'da emas, GitHub serverida yasaladi.
 """
 import asyncio
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -17,7 +18,8 @@ sys.path.insert(0, str(ROOT))
 
 PORT = 8770
 WORKFLOW = "daily-video.yml"
-TYPES = {"auto", "story", "education", "facts"}
+TYPES = {"auto", "story", "education", "facts", "cartoon", "games"}
+YT_RE = re.compile(r"^https?://(www\.|m\.)?(youtube\.com|youtu\.be)/\S+$")
 STYLES = {"auto", "stock", "ai"}
 PRIVACY = {"public", "unlisted", "private"}
 VOICES = {
@@ -46,11 +48,14 @@ def create_video(data):
     privacy = data.get("privacy", "public")
     length = str(data.get("length", "3"))
     topic = str(data.get("topic", "")).strip()[:200]
+    reference = str(data.get("reference", "")).strip()
+    if reference and not YT_RE.match(reference):
+        raise ValueError("Namuna YouTube havolasi bo'lishi kerak")
     if vtype not in TYPES or style not in STYLES or voice not in VOICES or privacy not in PRIVACY:
         raise ValueError("Noto'g'ri qiymat tanlangan")
     if not length.isdigit() or not 1 <= int(length) <= 30:
         raise ValueError("Uzunlik 1–30 daqiqa bo'lishi kerak")
-    gh("workflow", "run", WORKFLOW, "-f", f"type={vtype}", "-f", f"length={length}", "-f", f"topic={topic}",
+    gh("workflow", "run", WORKFLOW, "-f", f"type={vtype}", "-f", f"length={length}", "-f", f"topic={topic}", "-f", f"reference={reference}",
        "-f", f"style={style}", "-f", f"voice={voice}", "-f", f"privacy={privacy}")
     return {"ok": True}
 

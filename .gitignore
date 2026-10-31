@@ -6,3 +6,4 @@ token.json
 __pycache__/
 video/public/jobs/
 .DS_Store
+*.json.bak

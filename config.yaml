@@ -25,6 +25,10 @@ youtube:
   made_for_kids: true     # COPPA: bolalar kontenti uchun majburiy
   category_id: "27"       # 27 = Education, 1 = Film & Animation
 
+cartoon_style: >-
+  2D cartoon animation still, kids TV show style, bold clean outlines, flat vibrant colors,
+  expressive cute characters, simple background, no text
+
 # Har video turi uchun media manbalari (tartib bo'yicha sinaladi):
 #   pixabay_video, pixabay_photo, pixabay_illustration, pixabay_all — Pixabay (PIXABAY_API_KEY)
 #   ai — Pollinations AI rasm (tekin rejimda 45 soniyada 1 ta)
@@ -32,3 +36,5 @@ media:
   story: [ai, pixabay_illustration]
   education: [pixabay_illustration, pixabay_photo, ai]
   facts: [pixabay_video, pixabay_photo, ai]
+  cartoon: [ai, pixabay_illustration]
+  games: [pixabay_photo, pixabay_illustration, ai]

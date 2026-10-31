@@ -3,7 +3,8 @@
 import APP_HTML from "./app.html";
 
 const WORKFLOW = "daily-video.yml";
-const TYPES = { auto: "Avto", story: "Ertak", education: "Ta'limiy", facts: "Faktlar" };
+const TYPES = { auto: "Avto", story: "Ertak", education: "Ta'limiy", facts: "Faktlar", cartoon: "Multik", games: "O'yin" };
+const YT_RE = /https?:\/\/(?:www\.|m\.)?(?:youtube\.com|youtu\.be)\/\S+/;
 const LENGTHS = ["3", "5", "10", "15", "20"];
 const STYLES = ["auto", "stock", "ai"];
 const PRIVACY = ["public", "unlisted", "private"];
@@ -64,6 +65,7 @@ async function github(env, path, init = {}) {
 async function createVideo(env, o) {
   const inputs = {
     topic: String(o.topic || "").trim().slice(0, 200),
+    reference: YT_RE.test(String(o.reference || "")) ? String(o.reference).match(YT_RE)[0] : "",
     type: TYPES[o.type] ? o.type : "auto",
     length: LENGTHS.includes(String(o.length)) ? String(o.length) : "3",
     style: STYLES.includes(o.style) ? o.style : "auto",
@@ -107,6 +109,7 @@ function typeKeyboard() {
     inline_keyboard: [
       [{ text: "🎲 Avto", callback_data: "t:auto" }, { text: "📖 Ertak", callback_data: "t:story" }],
       [{ text: "🔤 Ta'limiy", callback_data: "t:education" }, { text: "🦋 Faktlar", callback_data: "t:facts" }],
+      [{ text: "🎨 Multik", callback_data: "t:cartoon" }, { text: "🎮 O'yin", callback_data: "t:games" }],
     ],
   };
 }
@@ -119,6 +122,8 @@ function lengthKeyboard(type) {
     ],
   };
 }
+
+const referenceFrom = (text) => (/Namuna: (\S+)/.exec(text || "") || [])[1] || "";
 
 const topicFrom = (text) => {
   const m = /Mavzu: (.+)/.exec(text || "");
@@ -142,6 +147,7 @@ async function handleUpdate(update, env, origin) {
         text:
           "👋 Only Baby Studio\n\n" +
           "• Mavzuni shunchaki yozing — video yasayman\n" +
+          "• YouTube havolasini yuboring — shu formatda original video\n" +
           "• /new — yangi video (AI mavzu tanlaydi)\n" +
           "• /status — oxirgi videolar holati\n" +
           "• 🎬 Studio — to'liq panel\n\n" +
@@ -156,6 +162,16 @@ async function handleUpdate(update, env, origin) {
         chat_id,
         text: lines.length ? lines.join("\n\n") : "Hali video yo'q.",
         reply_markup: { inline_keyboard: [studioButton(origin)] },
+      });
+    }
+    // YouTube havola → namuna asosida video
+    const link = text.match(YT_RE);
+    if (link) {
+      return tg(env, "sendMessage", {
+        chat_id,
+        text: `🔗 Shu formatda original video\nNamuna: ${link[0]}\nMavzu: ${NO_TOPIC}\n\nTurini tanlang (Avto — namunaga mos):`,
+        reply_markup: typeKeyboard(),
+        link_preview_options: { is_disabled: true },
       });
     }
     // /new [mavzu] yoki oddiy matn → mavzu
@@ -176,7 +192,10 @@ async function handleUpdate(update, env, origin) {
   const chat_id = cq.message.chat.id;
   const message_id = cq.message.message_id;
   const topic = topicFrom(cq.message.text);
-  const head = `🎬 Yangi video\nMavzu: ${topic || NO_TOPIC}`;
+  const reference = referenceFrom(cq.message.text);
+  const head = reference
+    ? `🔗 Shu formatda original video\nNamuna: ${reference}\nMavzu: ${topic || NO_TOPIC}`
+    : `🎬 Yangi video\nMavzu: ${topic || NO_TOPIC}`;
   const [kind, type, length] = cq.data.split(":");
 
   if (kind === "t") {
@@ -188,7 +207,7 @@ async function handleUpdate(update, env, origin) {
     await tg(env, "editMessageText", { chat_id, message_id, text: `${head}\n\nTurini tanlang:`, reply_markup: typeKeyboard() });
   } else if (kind === "go") {
     try {
-      await createVideo(env, { topic, type, length });
+      await createVideo(env, { topic, type, length, reference });
       await tg(env, "editMessageText", {
         chat_id, message_id,
         text: `${head}\nTuri: ${TYPES[type]} · ${length} daqiqa\n\n✅ Buyurtma qabul qilindi! Tayyor bo'lganda xabar beraman.`,

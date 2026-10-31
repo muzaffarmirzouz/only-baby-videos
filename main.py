@@ -21,6 +21,8 @@ from pipeline import images, stock, tts, video_builder
 
 ROOT = Path(__file__).resolve().parent
 TOPICS_FILE = ROOT / "topics_used.json"
+VIDEO_TYPES = ["story", "education", "facts", "cartoon", "games"]
+QUIZ_COUNTDOWN = 5  # soniya
 STYLE_SOURCES = {
     "stock": ["pixabay_video", "pixabay_photo", "pixabay_illustration", "ai"],
     "ai": ["ai", "pixabay_illustration"],
@@ -40,14 +42,15 @@ def main():
     cfg = yaml.safe_load((ROOT / "config.yaml").read_text())
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--type", choices=["auto", "story", "education", "facts"], default="story",
-                    help="auto = kun bo'yicha navbat bilan: story → education → facts")
+    ap.add_argument("--type", choices=["auto", *VIDEO_TYPES], default="story",
+                    help="auto = kun bo'yicha navbat bilan (namuna berilsa — namunaga mos tur)")
     ap.add_argument("--length", type=float, default=3, help="daqiqa: 3, 10, 15, 20 ...")
     ap.add_argument("--topic", help="mavzu (bo'lmasa AI o'zi tanlaydi)")
     ap.add_argument("--no-upload", action="store_true", help="faqat video yaratish, yuklamaslik")
     ap.add_argument("--from-script", help="tayyor script.json dan video yasash")
     ap.add_argument("--privacy", choices=["private", "unlisted", "public"])
     ap.add_argument("--voice", help="edge-tts ovozi, masalan en-US-AnaNeural (bo'lmasa config.yaml dagisi)")
+    ap.add_argument("--reference", help="yoqqan YouTube video havolasi — shu formatda original video yasaladi")
     ap.add_argument("--style", choices=["auto", "stock", "ai"], default="auto",
                     help="stock = Pixabay video/rasm, ai = AI rasm, auto = config.yaml dagi tartib")
     args = ap.parse_args()
@@ -55,16 +58,24 @@ def main():
         cfg["youtube"]["privacy"] = args.privacy
     if args.voice:
         cfg["voice"] = args.voice
-    if args.type == "auto":
-        args.type = ["story", "education", "facts"][datetime.now().timetuple().tm_yday % 3]
 
     # 1. Ssenariy
     if args.from_script:
         script = json.loads(Path(args.from_script).read_text())
     else:
         from pipeline.script_writer import ScriptWriter
+        writer = ScriptWriter(cfg)
+        ref = None
+        if args.reference:
+            from pipeline import reference
+            ref = reference.fetch(args.reference)
+            print(f"  Namuna: {ref['title']} ({ref['channel']}, {ref['minutes']} daq)")
+        if args.type == "auto":
+            args.type = writer.pick_type(ref) if ref else VIDEO_TYPES[datetime.now().timetuple().tm_yday % len(VIDEO_TYPES)]
         print(f"[1/5] Ssenariy yozilmoqda ({args.type}, {args.length} daqiqa)...")
-        script = ScriptWriter(cfg).write(args.type, args.length, args.topic, load_topics())
+        script = writer.write(args.type, args.length, args.topic, load_topics(), reference=ref)
+        if ref:
+            script["reference"] = ref["url"]
 
     if args.from_script:
         workdir = Path(args.from_script).resolve().parent  # qayta ishga tushirishda tayyor fayllar qayta ishlatiladi
@@ -75,7 +86,7 @@ def main():
     print(f"  Sarlavha: {script['title']}  ({len(script['scenes'])} sahna)\n  Papka: {workdir}")
 
     vcfg = cfg["video"]
-    style = cfg["image_style"]
+    style = cfg["cartoon_style"] if script.get("type") == "cartoon" else cfg["image_style"]
     characters = script.get("characters") or ""
     base_seed = random.randint(1, 10**8)  # ketma-ket seed — rasmlar uslubi izchilroq
     pixabay = stock.Pixabay()
@@ -86,7 +97,8 @@ def main():
     def fetch_media(scene, i, img, clip):
         """Sozlamadagi tartibda manbalarni sinaydi. Video bo'lsa davomiyligini qaytaradi."""
         query = scene.get("search_query") or scene["image_prompt"]
-        for src in sources:
+        # Viktorinada rasm javob ochilguncha xiralashtiriladi — video klip kerak emas
+        for src in [s for s in sources if not (scene.get("quiz") and s == "pixabay_video")]:
             try:
                 if src == "pixabay_video":
                     clip_dur = pixabay.video(query, clip)
@@ -124,9 +136,28 @@ def main():
             clip_dur = None
         else:
             clip_dur = fetch_media(scene, i, img, clip)
-        scenes.append({"image": img, "audio": audio, "duration": dur,
-                       "video": clip if clip_dur else None, "video_duration": clip_dur,
-                       "captions": tts.caption_chunks(scene["narration"], dur)})
+        item = {"image": img, "audio": audio, "duration": dur,
+                "video": clip if clip_dur else None, "video_duration": clip_dur,
+                "captions": tts.caption_chunks(scene["narration"], dur)}
+        if scene.get("quiz"):
+            # Savol → taymer → javob: javob ovozi alohida, taymerdan keyin boshlanadi
+            answer_audio = workdir / f"answer_{i:03d}.mp3"
+            if answer_audio.exists():
+                a_dur = tts.audio_duration(answer_audio)
+            else:
+                a_dur = tts.synthesize(scene["answer_narration"], answer_audio, cfg["voice"], cfg["voice_rate"])
+            reveal_at = dur + 0.3 + QUIZ_COUNTDOWN
+            item.update({
+                "duration": reveal_at + a_dur,
+                "video": None,
+                "captions": [(a + reveal_at, b + reveal_at, t)
+                             for a, b, t in tts.caption_chunks(scene["answer_narration"], a_dur)],
+                "quiz": {**scene["quiz"], "revealAt": reveal_at, "countdown": QUIZ_COUNTDOWN,
+                         # "A. Sheep" → "Sheep": harfni Remotion o'zi qo'yadi
+                         "options": [re.sub(r"^\s*[A-Ca-c][.)]\s*", "", o) for o in scene["quiz"]["options"]],
+                         "answerAudio": answer_audio},
+            })
+        scenes.append(item)
 
     print("[4/5] Remotion bilan video montaj qilinmoqda...")
     tracks = sorted((ROOT / "assets" / "music").glob("*.mp3"))

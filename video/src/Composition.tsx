@@ -7,6 +7,7 @@ import {
   interpolate,
   Loop,
   OffthreadVideo,
+  Sequence,
   Series,
   spring,
   staticFile,
@@ -19,7 +20,17 @@ import { loadFont } from "@remotion/google-fonts/Fredoka";
 const { fontFamily } = loadFont("normal", { weights: ["600", "700"], subsets: ["latin"] });
 
 type Caption = { start: number; end: number; text: string };
+// O'yin sahnasi: savol → taymer → javob (revealAt soniyada ochiladi)
+type Quiz = {
+  question: string;
+  options: string[];
+  answer: number;
+  revealAt: number;
+  countdown: number;
+  answerAudio: string;
+};
 type Scene = {
+  quiz?: Quiz | null;
   image: string;
   video: string | null;
   videoDuration: number | null;
@@ -30,6 +41,7 @@ type Scene = {
 };
 export type Props = {
   title: string;
+  kind: string;
   music: string | null;
   musicVolume: number;
   scenes: Scene[];
@@ -47,7 +59,7 @@ const calculateMetadata: CalculateMetadataFunction<Props> = ({ props }) => {
   return { durationInFrames: Math.max(total, 1) };
 };
 
-const defaultProps: Props = { title: "My Kids Video", music: null, musicVolume: 0.12, scenes: [] };
+const defaultProps: Props = { title: "My Kids Video", kind: "story", music: null, musicVolume: 0.12, scenes: [] };
 
 export const MyComposition = () => {
   return (
@@ -64,7 +76,7 @@ export const MyComposition = () => {
   );
 };
 
-export const KidsVideo: React.FC<Props> = ({ title, music, musicVolume, scenes }) => {
+export const KidsVideo: React.FC<Props> = ({ title, kind, music, musicVolume, scenes }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: "#fff4d6" }}>
       {music ? <Audio src={staticFile(music)} volume={musicVolume} loop /> : null}
@@ -74,7 +86,7 @@ export const KidsVideo: React.FC<Props> = ({ title, music, musicVolume, scenes }
         </Series.Sequence>
         {scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={sceneFrames(s)}>
-            <SceneView scene={s} index={i} />
+            {s.quiz ? <QuizScene scene={s} quiz={s.quiz} /> : <SceneView scene={s} index={i} cartoon={kind === "cartoon"} />}
           </Series.Sequence>
         ))}
       </Series>
@@ -121,10 +133,14 @@ const Intro: React.FC<{ title: string; image?: string }> = ({ title, image }) =>
   );
 };
 
-const SceneView: React.FC<{ scene: Scene; index: number }> = ({ scene }) => {
+const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean }> = ({ scene, cartoon }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const p = frame / durationInFrames;
+  // Multik: sahna "sakrab" kiradi va sekin chayqaladi
+  const enter = cartoon ? spring({ frame, fps, config: { damping: 8, mass: 0.7 } }) : 1;
+  const wobble = cartoon ? Math.sin(frame / 18) * 1.2 : 0;
+  const bob = cartoon ? Math.sin(frame / 11) * 0.6 : 0;
 
   // Ken Burns harakati: yaqinlashish, uzoqlashish, o'ngga va chapga surilish
   const motions = [
@@ -159,7 +175,12 @@ const SceneView: React.FC<{ scene: Scene; index: number }> = ({ scene }) => {
         ) : (
           <Img
             src={staticFile(scene.image)}
-            style={{ width: "100%", height: "100%", objectFit: "cover", transform: `scale(${m.scale}) translateX(${m.x}%)` }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: `scale(${m.scale * (0.85 + 0.15 * enter)}) translateX(${m.x}%) translateY(${bob}%) rotate(${wobble}deg)`,
+            }}
           />
         )}
       </AbsoluteFill>
@@ -178,6 +199,135 @@ const SceneView: React.FC<{ scene: Scene; index: number }> = ({ scene }) => {
               lineHeight: 1.25,
               textAlign: "center",
               transform: `scale(${0.85 + 0.15 * pop})`,
+            }}
+          >
+            {caption.text}
+          </div>
+        </AbsoluteFill>
+      ) : null}
+    </AbsoluteFill>
+  );
+};
+
+const OPTION_COLORS = ["#ff5fa2", "#38c9ff", "#ffb800"];
+
+const QuizScene: React.FC<{ scene: Scene; quiz: Quiz }> = ({ scene, quiz }) => {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames } = useVideoConfig();
+  const t = frame / fps;
+  const revealFrame = Math.round(quiz.revealAt * fps);
+  const revealed = frame >= revealFrame;
+  const reveal = spring({ frame: frame - revealFrame, fps, config: { damping: 10 } });
+  const countStart = quiz.revealAt - quiz.countdown;
+  const left = Math.ceil(quiz.revealAt - t);
+  const opacity = interpolate(frame, [0, 10, durationInFrames - 10, durationInFrames], [0, 1, 1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const caption = revealed ? scene.captions.find((c) => t >= c.start && t < c.end) : undefined;
+
+  return (
+    <AbsoluteFill style={{ opacity, fontFamily }}>
+      {/* Javob ochilguncha rasm yashirin (xira) */}
+      <Img
+        src={staticFile(scene.image)}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          filter: `blur(${revealed ? 28 * (1 - reveal) : 28}px) brightness(${revealed ? 0.6 + 0.4 * reveal : 0.6})`,
+          transform: `scale(${1.1 - 0.05 * (revealed ? reveal : 0)})`,
+        }}
+      />
+      <Audio src={staticFile(scene.audio)} />
+      <Sequence from={revealFrame}>
+        <Audio src={staticFile(quiz.answerAudio)} />
+      </Sequence>
+
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 70 }}>
+        <div
+          style={{
+            fontSize: 84,
+            fontWeight: 700,
+            color: "#fff",
+            textAlign: "center",
+            maxWidth: 1600,
+            WebkitTextStroke: "5px #1e1e5a",
+            paintOrder: "stroke fill",
+            transform: `scale(${spring({ frame, fps, config: { damping: 9 } })})`,
+          }}
+        >
+          {quiz.question}
+        </div>
+      </AbsoluteFill>
+
+      <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: caption ? 230 : 110 }}>
+        <div style={{ display: "flex", gap: 40 }}>
+          {quiz.options.map((o, i) => {
+            const pop = spring({ frame: frame - 8 - i * 6, fps, config: { damping: 9, mass: 0.6 } });
+            const correct = i === quiz.answer;
+            const bg = revealed ? (correct ? "#2fbf71" : "rgba(40,40,70,0.75)") : OPTION_COLORS[i % 3];
+            const scale = pop * (revealed ? (correct ? 1 + 0.12 * reveal : 0.9) : 1);
+            return (
+              <div
+                key={i}
+                style={{
+                  minWidth: 380,
+                  padding: "26px 40px",
+                  borderRadius: 36,
+                  background: bg,
+                  color: "#fff",
+                  fontSize: 64,
+                  fontWeight: 700,
+                  textAlign: "center",
+                  boxShadow: "0 12px 0 rgba(0,0,0,0.25)",
+                  opacity: revealed && !correct ? 0.6 : 1,
+                  transform: `scale(${scale})`,
+                }}
+              >
+                {String.fromCharCode(65 + i)}. {o}
+                {revealed && correct ? " ✓" : ""}
+              </div>
+            );
+          })}
+        </div>
+      </AbsoluteFill>
+
+      {/* Taymer */}
+      {t >= countStart && !revealed ? (
+        <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
+          <div
+            style={{
+              width: 260,
+              height: 260,
+              borderRadius: "50%",
+              background: "#ffb800",
+              border: "14px solid #fff",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 150,
+              fontWeight: 700,
+              color: "#1e1e5a",
+              transform: `scale(${1 + 0.12 * Math.max(0, 1 - ((t - countStart) % 1) * 4)})`,
+              boxShadow: "0 16px 40px rgba(0,0,0,0.35)",
+            }}
+          >
+            {left}
+          </div>
+        </AbsoluteFill>
+      ) : null}
+
+      {caption ? (
+        <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 60 }}>
+          <div
+            style={{
+              maxWidth: 1500,
+              padding: "18px 40px",
+              borderRadius: 32,
+              backgroundColor: "rgba(20, 20, 60, 0.7)",
+              color: "white",
+              fontSize: 52,
+              textAlign: "center",
             }}
           >
             {caption.text}

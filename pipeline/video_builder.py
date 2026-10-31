@@ -40,6 +40,7 @@ def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, con
 
     props = {
         "title": script["title"],
+        "kind": script.get("type", "story"),
         "music": publish(music) if music else None,
         "musicVolume": music_volume,
         "scenes": [
@@ -51,6 +52,7 @@ def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, con
                 "duration": s["duration"],
                 "captions": [{"start": a, "end": b, "text": t} for a, b, t in s["captions"]],
                 "motion": i % 4,
+                "quiz": {**s["quiz"], "answerAudio": publish(s["quiz"]["answerAudio"])} if s.get("quiz") else None,
             }
             for i, s in enumerate(scenes)
         ],

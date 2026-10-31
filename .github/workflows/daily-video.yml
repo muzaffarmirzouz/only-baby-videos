@@ -1,7 +1,7 @@
 # Har kuni bolalar videosini yaratib, YouTube kanalga yuklaydi.
 # Qo'lda ishga tushirish: GitHub → Actions → "Daily kids video" → Run workflow
 name: Daily kids video
-run-name: ${{ github.event_name == 'schedule' && 'Kunlik video (avto)' || format('{0} · {1} daq · {2}', inputs.type, inputs.length, inputs.topic || 'AI mavzu tanlaydi') }}
+run-name: ${{ github.event_name == 'schedule' && 'Kunlik video (avto)' || format('{0} · {1} daq · {2}', inputs.type, inputs.length, inputs.topic || (inputs.reference && 'namuna asosida') || 'AI mavzu tanlaydi') }}
 
 on:
   schedule:
@@ -11,10 +11,13 @@ on:
       topic:
         description: "Mavzu (bo'sh qolsa AI o'zi tanlaydi)"
         default: ""
+      reference:
+        description: "Namuna YouTube havolasi (ixtiyoriy) — shu formatda original video"
+        default: ""
       type:
         description: "Video turi"
         type: choice
-        options: [auto, story, education, facts]
+        options: [auto, story, education, facts, cartoon, games]
         default: auto
       length:
         description: "Uzunligi (daqiqa)"
@@ -91,11 +94,13 @@ jobs:
           VIDEO_LENGTH: ${{ inputs.length || vars.VIDEO_LENGTH || '3' }}
           VIDEO_PRIVACY: ${{ inputs.privacy || vars.YOUTUBE_PRIVACY || 'public' }}
           VIDEO_TOPIC: ${{ inputs.topic }}
+          VIDEO_REFERENCE: ${{ inputs.reference }}
           VIDEO_VOICE: ${{ inputs.voice || vars.VIDEO_VOICE || 'en-US-JennyNeural' }}
           VIDEO_STYLE: ${{ inputs.style || vars.VIDEO_STYLE || 'auto' }}
         run: |
           args=(--type "$VIDEO_TYPE" --length "$VIDEO_LENGTH" --privacy "$VIDEO_PRIVACY" --voice "$VIDEO_VOICE" --style "$VIDEO_STYLE")
           if [ -n "$VIDEO_TOPIC" ]; then args+=(--topic "$VIDEO_TOPIC"); fi
+          if [ -n "$VIDEO_REFERENCE" ]; then args+=(--reference "$VIDEO_REFERENCE"); fi
           python -W ignore main.py "${args[@]}"
 
       - name: Telegram xabarnomasi

@@ -274,12 +274,12 @@ def main():
     if premium:
         print(f"  Rasm va ovoz xarajati: ~${cost:.2f} (+ ssenariy ~$0.01)")
 
+    if args.no_upload:
+        return  # sinov — mavzular ro'yxatiga yozilmaydi
+
     topics = load_topics()
     topics.append(script.get("topic", script["title"]))
     TOPICS_FILE.write_text(json.dumps(topics, indent=2, ensure_ascii=False))
-
-    if args.no_upload:
-        return
     from pipeline.uploader import upload
     print("YouTube'ga yuklanmoqda...")
     vid = upload(final, script, None if short else thumb, cfg["youtube"])

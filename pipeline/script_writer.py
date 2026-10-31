@@ -38,13 +38,15 @@ CARTOON_FORMAT = """This is an animated cartoon: characters are separate puppets
 For EVERY scene also add:
   "background_prompt": the place only, with NO characters or animals in it (e.g. "sunny meadow with a big apple tree and a picnic blanket"),
   "cast": 1-3 characters on screen, each {"name": exact name from the cast list, "position": "left" | "center" | "right",
-          "action": one of %s},
+          "action": one of %s, "emotion": "happy" | "sad" | "crying" | "angry"},
   "speaker": name of the character who talks in this scene, or "narrator",
   "effect": animated ambience that fits the place and mood, one of %s (stars only at night, snow only in winter),
   "props": objects from the props list visible in this scene (or []), each {"name": exact prop name, "position": "left" | "center" | "right",
            "action": one of ["drive_across", "roll", "float", "bounce", "idle"]}.
 Props are drawn separately: keep them OUT of background_prompt.
-Choose actions that match the story (walk_in when arriving, hop when happy, wave when greeting, peek when shy or hiding).""" % (
+Choose actions that match the story (walk_in when arriving, hop when happy, wave when greeting, peek when shy or hiding).
+Emotions follow the story: sad or crying when something goes wrong, angry (a grumpy pout) only briefly in a small quarrel,
+and everyone happy again by the end.""" % (
     CARTOON_ACTIONS, SCENE_EFFECTS)
 
 SCENE_SECONDS = {"games": 22}  # savol + 5 soniya taymer + javob
@@ -132,9 +134,13 @@ Reference:
             genre = random.choice(series["genres"])
             pattern = random.choice(series.get("story_patterns") or ["a small friendly adventure"])
             # Har epizodda boshqa qahramonlar va boshqa "qutqaruvchi" — hamma navbat bilan chiqadi
-            hero = random.choice(series["characters"])
-            others = random.sample([c for c in series["characters"] if c is not hero], k=random.choice([1, 2]))
-            today = [hero] + others
+            # Promptda ismi aytilgan qahramonlar albatta epizodga kiradi
+            named = [c for c in series["characters"] if topic and c["name"].lower() in topic.lower()]
+            hero = named[-1] if named else random.choice(series["characters"])
+            rest = [c for c in series["characters"] if c is not hero and c not in named]
+            today = [hero] + [c for c in named if c is not hero]
+            if len(today) < 2:  # promptda bitta (yoki hech) qahramon bo'lsa — 1-2 ta do'st qo'shamiz
+                today += random.sample(rest, k=min(len(rest), random.choice([1, 2])))
             roster = "\n".join(f"- {c['name']}: {c['look']}. Personality: {c['personality']}. "
                                f"Special skill: {c.get('skill', 'kindness')}" for c in series["characters"])
             names = [c["name"] for c in series["characters"]]
@@ -207,7 +213,7 @@ Return JSON:
                 names = [c["name"] for c in outline.get("cast", [])]
                 props = [p["name"] for p in outline.get("props") or []]
                 rules += f"\n{CARTOON_FORMAT}\nCast list: {json.dumps(names)}\nProps list: {json.dumps(props)}"
-                example = example[:-1] + ', "background_prompt": "...", "cast": [{"name": "...", "position": "left", "action": "hop"}], "speaker": "...", "effect": "sparkles", "props": []}' 
+                example = example[:-1] + ', "background_prompt": "...", "cast": [{"name": "...", "position": "left", "action": "hop", "emotion": "happy"}], "speaker": "...", "effect": "sparkles", "props": []}' 
             data = self._ask_scenes(games, has_intro, has_outro,
                 SAFETY_RULES,
                 f"""Video title: {outline["title"]}

@@ -57,7 +57,7 @@ CHARACTERS_DIR = ROOT / "assets" / "characters"
 
 
 ACTION_WORDS = {"walk_in": "walks in", "run_across": "runs happily", "hop": "hops with joy", "wave": "waves hello",
-                "bounce": "bounces", "spin": "spins around", "peek": "peeks out shyly", "idle": "smiles and sways"}
+                "bounce": "bounces", "spin": "spins around", "peek": "peeks out shyly", "idle": "sways gently"}
 
 
 def animate_scenes(script, scenes, workdir, animator, short):
@@ -75,8 +75,9 @@ def animate_scenes(script, scenes, workdir, animator, short):
         if not clip.exists():
             start = workdir / f"anim_start_{i:03d}.jpg"
             video_builder.compose_cover(item["image"], item["puppets"], start)
-            cast = {c["name"]: c.get("action", "idle") for c in scene.get("cast") or []}
-            acts = ", ".join(f"{n} {ACTION_WORDS.get(a, 'smiles')}" for n, a in cast.items())
+            feel = {"sad": "looks sad", "crying": "is crying with tears", "angry": "pouts grumpily", "happy": "is happy"}
+            acts = ", ".join(f"{c['name']} {ACTION_WORDS.get(c.get('action', 'idle'), 'smiles')} and "
+                             f"{feel.get(c.get('emotion'), 'is happy')}" for c in scene.get("cast") or [])
             mood = scene["narration"].split(".")[0][:160]
             print(f"  Animatsiya: sahna {i + 1} ({acts})")
             if not animator.animate(start, f"{acts}. Moment: {mood}.", clip, short):
@@ -239,7 +240,13 @@ def main():
 
     def puppets_for(scene):
         cast = [c for c in scene.get("cast") or [] if c.get("name") in sprites][:3]
-        return [{"src": sprites[c["name"]],
+        def sprite_for(c):
+            # Kayfiyatga mos rasm: baby.png → baby_sad.png (bo'lsa)
+            base = sprites[c["name"]]
+            emo = c.get("emotion")
+            alt = base.with_name(f"{base.stem}_{emo}.png") if emo in ("sad", "crying", "angry") else None
+            return alt if alt and alt.exists() else base
+        return [{"src": sprite_for(c),
                  "position": c.get("position") if c.get("position") in ("left", "center", "right") else "center",
                  "action": c.get("action") or "idle",
                  "speaking": c["name"] == scene.get("speaker")} for c in cast] + [

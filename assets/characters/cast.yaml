@@ -1,5 +1,7 @@
 # "Only Baby & Friends" seriali — doimiy qahramonlar (kanal logosidan).
 # Rasmlar bir marta chizilgan (fonsiz PNG) va har bir multikda qayta ishlatiladi.
+# Har qahramonning kayfiyat rasmlari: <rasm>_sad.png, <rasm>_crying.png, <rasm>_angry.png
+emotions: [happy, sad, crying, angry]
 series: Only Baby & Friends
 
 # Fon rasmlari uslubi — logoga mos

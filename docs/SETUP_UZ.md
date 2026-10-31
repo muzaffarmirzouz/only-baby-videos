@@ -57,6 +57,13 @@ Pollinations tekin rejimda 45 soniyada 1 ta rasm beradi:
 3 daqiqalik video ≈ 12 rasm ≈ 10 daqiqa; 20 daqiqalik video ≈ 60 rasm ≈ 50 daqiqa.
 Tezlashtirish uchun `.env` ga `POLLINATIONS_KEY` qo'ying. Rasm o'ng pastki burchagida kichik Pollinations belgisi bo'ladi.
 
+## Boshqaruv paneli (Only Baby Studio)
+`Only Baby Studio.command` faylini Finder'da ikki marta bosing (yoki `.venv/bin/python panel/server.py`).
+Brauzerda http://localhost:8770 ochiladi:
+- mavzu, tur, uzunlik, uslub, ovoz va ko'rinishni tanlab **Video yasash** — video GitHub serverida yasaladi;
+- buyurtmalar holati va kanal videolari shu yerda ko'rinadi;
+- ▶ tugmasi bilan ovozlarni oldindan tinglash mumkin.
+
 ## Montajni ko'rish/tahrirlash (Remotion Studio)
 ```bash
 cd video && npm run dev

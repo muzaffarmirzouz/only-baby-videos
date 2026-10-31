@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "panel",
+      "runtimeExecutable": "/Users/muzaffarmirzo/baby/.venv/bin/python",
+      "runtimeArgs": ["-W", "ignore", "panel/server.py", "--no-browser"],
+      "port": 8770
+    }
+  ]
+}

@@ -21,6 +21,10 @@ from pipeline import images, stock, tts, video_builder
 
 ROOT = Path(__file__).resolve().parent
 TOPICS_FILE = ROOT / "topics_used.json"
+STYLE_SOURCES = {
+    "stock": ["pixabay_video", "pixabay_photo", "pixabay_illustration", "ai"],
+    "ai": ["ai", "pixabay_illustration"],
+}
 
 
 def load_topics():
@@ -43,9 +47,14 @@ def main():
     ap.add_argument("--no-upload", action="store_true", help="faqat video yaratish, yuklamaslik")
     ap.add_argument("--from-script", help="tayyor script.json dan video yasash")
     ap.add_argument("--privacy", choices=["private", "unlisted", "public"])
+    ap.add_argument("--voice", help="edge-tts ovozi, masalan en-US-AnaNeural (bo'lmasa config.yaml dagisi)")
+    ap.add_argument("--style", choices=["auto", "stock", "ai"], default="auto",
+                    help="stock = Pixabay video/rasm, ai = AI rasm, auto = config.yaml dagi tartib")
     args = ap.parse_args()
     if args.privacy:
         cfg["youtube"]["privacy"] = args.privacy
+    if args.voice:
+        cfg["voice"] = args.voice
     if args.type == "auto":
         args.type = ["story", "education", "facts"][datetime.now().timetuple().tm_yday % 3]
 
@@ -70,7 +79,7 @@ def main():
     characters = script.get("characters") or ""
     base_seed = random.randint(1, 10**8)  # ketma-ket seed — rasmlar uslubi izchilroq
     pixabay = stock.Pixabay()
-    sources = cfg["media"].get(script.get("type", "story"), ["ai"])
+    sources = STYLE_SOURCES.get(args.style) or cfg["media"].get(script.get("type", "story"), ["ai"])
     if not pixabay.enabled:
         sources = [s for s in sources if not s.startswith("pixabay")] or ["ai"]
 

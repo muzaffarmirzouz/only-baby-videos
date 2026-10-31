@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Only Baby Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fff8ef;
+    --surface: #ffffff;
+    --surface-2: #fff3e3;
+    --border: #f0dfc8;
+    --text: #2b2340;
+    --muted: #7a6f8c;
+    --accent: #ff5f8f;
+    --accent-2: #ffb020;
+    --accent-ink: #ffffff;
+    --blue: #3aa8ff;
+    --green: #2fbf71;
+    --red: #e5484d;
+    --shadow: 0 6px 24px rgba(80, 50, 20, 0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17131f;
+      --surface: #211b2c;
+      --surface-2: #2a2338;
+      --border: #3a3149;
+      --text: #f4eefc;
+      --muted: #a99bbd;
+      --shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17131f;
+    --surface: #211b2c;
+    --surface-2: #2a2338;
+    --border: #3a3149;
+    --text: #f4eefc;
+    --muted: #a99bbd;
+    --shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: 15px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center;
+    color: #fff; font-family: "Fredoka"; font-weight: 700; font-size: 20px;
+  }
+  header h1 { font-family: "Fredoka"; font-size: 22px; margin: 0; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  header .spacer { flex: 1; }
+  .chip {
+    font-size: 13px; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px;
+    text-decoration: none;
+  }
+  main {
+    display: grid;
+    grid-template-columns: minmax(320px, 400px) 1fr;
+    gap: 24px;
+    padding: 24px 28px 48px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 {
+    font-family: "Fredoka"; font-size: 17px; margin: 0 0 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card h2 .count { color: var(--muted); font-weight: 500; font-size: 14px; }
+  .stack { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+  label { display: block; font-weight: 700; font-size: 13px; margin: 0 0 6px; }
+  .field { margin-bottom: 16px; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  input, select, textarea {
+    width: 100%;
+    font: inherit;
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .seg {
+    display: grid; gap: 4px;
+    grid-auto-flow: column; grid-auto-columns: 1fr;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 4px;
+  }
+  .seg button {
+    font: inherit; font-weight: 700; font-size: 13px;
+    border: 0; border-radius: 9px; padding: 8px 4px;
+    background: transparent; color: var(--muted); cursor: pointer;
+  }
+  .seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .voice { display: flex; gap: 8px; }
+  .icon-btn {
+    flex: none; width: 42px;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface-2); color: var(--text); cursor: pointer; font-size: 15px;
+  }
+  .primary {
+    width: 100%;
+    font-family: "Fredoka"; font-size: 17px; font-weight: 600;
+    color: var(--accent-ink);
+    background: linear-gradient(135deg, var(--accent), #ff7a59);
+    border: 0; border-radius: 14px; padding: 14px; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(255, 95, 143, 0.35);
+  }
+  .primary:disabled { opacity: .6; cursor: wait; }
+  .msg { margin-top: 12px; font-size: 13px; min-height: 18px; }
+  .msg.ok { color: var(--green); }
+  .msg.err { color: var(--red); }
+  .runs { display: flex; flex-direction: column; gap: 10px; }
+  .run {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+    padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2);
+  }
+  .run .t { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .run .s { color: var(--muted); font-size: 12px; }
+  .run a { color: var(--blue); font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+  .dot.run-progress { background: var(--accent-2); animation: pulse 1.2s infinite; }
+  .dot.run-ok { background: var(--green); }
+  .dot.run-fail { background: var(--red); }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    background: var(--surface-2); color: var(--muted); border: 1px solid var(--border);
+  }
+  .badge.public { color: var(--green); border-color: currentColor; }
+  .badge.private { color: var(--red); border-color: currentColor; }
+  .badge.unlisted { color: var(--accent-2); border-color: currentColor; }
+  .videos { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+  .video { text-decoration: none; color: inherit; display: block; }
+  .video .thumb {
+    position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: var(--surface-2);
+  }
+  .video img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .video .dur {
+    position: absolute; right: 6px; bottom: 6px; background: rgba(0,0,0,.75); color: #fff;
+    font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 6px;
+  }
+  .video .t { font-weight: 700; margin: 8px 0 4px; font-size: 14px; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .video .s { color: var(--muted); font-size: 12px; display: flex; gap: 8px; align-items: center; }
+  .empty { color: var(--muted); font-size: 14px; padding: 12px 0; }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; padding: 16px; }
+    header { padding: 14px 16px; }
+    header p { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">OB</div>
+  <div>
+    <h1>Only Baby Studio</h1>
+    <p>Mavzudan tayyor YouTube videogacha. Video GitHub serverida yasaladi.</p>
+  </div>
+  <div class="spacer"></div>
+  <a class="chip" href="https://github.com/muzaffarmirzouz/only-baby-videos/actions" target="_blank">GitHub Actions ↗</a>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Yangi video</h2>
+
+    <div class="field">
+      <label for="topic">Mavzu</label>
+      <textarea id="topic" maxlength="200" placeholder="masalan: Why do cats purr? Bo'sh qolsa, AI o'zi tanlaydi"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Turi</label>
+      <div class="seg" data-name="type">
+        <button data-v="auto" class="on">Avto</button>
+        <button data-v="story">Ertak</button>
+        <button data-v="education">Ta'limiy</button>
+        <button data-v="facts">Faktlar</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Vizual uslub</label>
+      <div class="seg" data-name="style">
+        <button data-v="auto" class="on">Avto</button>
+        <button data-v="stock">Stok video</button>
+        <button data-v="ai">AI rasm</button>
+      </div>
+      <div class="hint" id="style-hint">Ertakka AI rasm, faktlarga stok video avtomatik tanlanadi.</div>
+    </div>
+
+    <div class="row field">
+      <div>
+        <label for="length">Uzunlik</label>
+        <select id="length">
+          <option value="3">3 daqiqa</option>
+          <option value="5">5 daqiqa</option>
+          <option value="10">10 daqiqa</option>
+          <option value="15">15 daqiqa</option>
+          <option value="20">20 daqiqa</option>
+        </select>
+      </div>
+      <div>
+        <label for="privacy">Ko'rinish</label>
+        <select id="privacy">
+          <option value="public">Public</option>
+          <option value="unlisted">Unlisted</option>
+          <option value="private">Private</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="voice">Ovoz</label>
+      <div class="voice">
+        <select id="voice"></select>
+        <button class="icon-btn" id="play" title="Ovozni tinglash">▶</button>
+      </div>
+    </div>
+
+    <button class="primary" id="create">Video yasash</button>
+    <div class="hint" id="estimate"></div>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <div class="stack">
+    <section class="card">
+      <h2>Buyurtmalar <span class="count" id="runs-count"></span></h2>
+      <div class="runs" id="runs"><div class="empty">Yuklanmoqda…</div></div>
+    </section>
+
+    <section class="card">
+      <h2>Kanal videolari <span class="count" id="channel"></span></h2>
+      <div class="videos" id="videos"><div class="empty">Yuklanmoqda…</div></div>
+    </section>
+  </div>
+</main>
+
+<audio id="audio"></audio>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const state = { type: "auto", style: "auto" };
+
+document.querySelectorAll(".seg").forEach((seg) => {
+  seg.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    seg.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    state[seg.dataset.name] = b.dataset.v;
+    updateEstimate();
+  });
+});
+
+function updateEstimate() {
+  const len = +$("#length").value;
+  const scenes = Math.ceil((len * 130) / 45);
+  const ai = state.style === "ai" || (state.style === "auto" && state.type === "story");
+  const mins = Math.round(4 + scenes * (ai ? 0.85 : 0.15) + len * 0.8);
+  $("#estimate").textContent = `${len} daqiqalik video taxminan ${mins} daqiqada tayyor bo'ladi (${scenes} sahna).`;
+  const hints = {
+    auto: "Ertakka AI rasm, faktlarga stok video avtomatik tanlanadi.",
+    stock: "Pixabay'dan haqiqiy video kliplar. Tez tayyorlanadi.",
+    ai: "Har sahnaga AI rasm. Tekin rejimda sekinroq (har rasmga ~45 soniya).",
+  };
+  $("#style-hint").textContent = hints[state.style];
+}
+$("#length").addEventListener("change", updateEstimate);
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+
+async function loadOptions() {
+  const { voices } = await api("/api/options");
+  $("#voice").innerHTML = Object.entries(voices)
+    .map(([id, name]) => `<option value="${id}">${name}</option>`).join("");
+}
+
+$("#play").addEventListener("click", () => {
+  const a = $("#audio");
+  a.src = `/api/voice-sample?voice=${encodeURIComponent($("#voice").value)}`;
+  a.play();
+});
+
+$("#create").addEventListener("click", async () => {
+  const btn = $("#create"), msg = $("#msg");
+  btn.disabled = true;
+  msg.className = "msg";
+  msg.textContent = "GitHub'ga yuborilmoqda…";
+  try {
+    await api("/api/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic: $("#topic").value, type: state.type, style: state.style,
+        length: $("#length").value, privacy: $("#privacy").value, voice: $("#voice").value,
+      }),
+    });
+    msg.className = "msg ok";
+    msg.textContent = "Buyurtma qabul qilindi! Holati o'ng tomonda ko'rinadi.";
+    $("#topic").value = "";
+    setTimeout(loadRuns, 4000);
+  } catch (e) {
+    msg.className = "msg err";
+    msg.textContent = "Xato: " + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function ago(iso) {
+  const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (m < 1) return "hozirgina";
+  if (m < 60) return `${m} daq oldin`;
+  const h = Math.round(m / 60);
+  return h < 24 ? `${h} soat oldin` : `${Math.round(h / 24)} kun oldin`;
+}
+
+function runState(r) {
+  if (r.status !== "completed") return ["run-progress", r.status === "queued" ? "Navbatda" : "Yasalmoqda…"];
+  if (r.conclusion === "success") return ["run-ok", "Tayyor va yuklandi"];
+  if (r.conclusion === "cancelled") return ["", "Bekor qilindi"];
+  return ["run-fail", "Xato"];
+}
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let timer;
+async function loadRuns() {
+  clearTimeout(timer);
+  let active = false;
+  try {
+    const runs = await api("/api/runs");
+    $("#runs-count").textContent = runs.length ? `· oxirgi ${runs.length} ta` : "";
+    $("#runs").innerHTML = runs.length ? runs.map((r) => {
+      const [cls, label] = runState(r);
+      if (cls === "run-progress") active = true;
+      const how = r.event === "schedule" ? "kunlik avto" : "qo'lda";
+      return `<div class="run">
+        <span class="dot ${cls}"></span>
+        <div style="min-width:0"><div class="t">${esc(r.displayTitle)}</div>
+          <div class="s">${label} · ${ago(r.createdAt)} · ${how}</div></div>
+        <a href="${r.url}" target="_blank">Ko'rish ↗</a>
+      </div>`;
+    }).join("") : `<div class="empty">Hali buyurtma yo'q.</div>`;
+  } catch (e) {
+    $("#runs").innerHTML = `<div class="empty">GitHub'dan o'qib bo'lmadi: ${esc(e.message)}</div>`;
+  }
+  timer = setTimeout(() => { loadRuns(); if (!active) loadVideos(); }, active ? 15000 : 60000);
+}
+
+function dur(iso) {
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/) || [];
+  const h = +m[1] || 0, mi = +m[2] || 0, s = +m[3] || 0;
+  return (h ? h + ":" + String(mi).padStart(2, "0") : mi) + ":" + String(s).padStart(2, "0");
+}
+
+async function loadVideos() {
+  try {
+    const { channel, videos } = await api("/api/videos");
+    $("#channel").textContent = "· " + channel;
+    $("#videos").innerHTML = videos.length ? videos.map((v) => `
+      <a class="video" href="https://youtu.be/${v.id}" target="_blank">
+        <div class="thumb">${v.thumb ? `<img src="${v.thumb}" alt="">` : ""}<span class="dur">${dur(v.duration)}</span></div>
+        <div class="t">${esc(v.title)}</div>
+        <div class="s"><span class="badge ${v.privacy}">${v.privacy}</span>${v.views} ko'rish · ${ago(v.published)}</div>
+      </a>`).join("") : `<div class="empty">Kanalda hali video yo'q.</div>`;
+  } catch (e) {
+    $("#videos").innerHTML = `<div class="empty">YouTube'dan o'qib bo'lmadi: ${esc(e.message)}</div>`;
+  }
+}
+
+loadOptions();
+updateEstimate();
+loadRuns();
+loadVideos();
+</script>
+</body>
+</html>

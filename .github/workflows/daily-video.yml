@@ -1,0 +1,98 @@
+# Har kuni bolalar videosini yaratib, YouTube kanalga yuklaydi.
+# Qo'lda ishga tushirish: GitHub → Actions → "Daily kids video" → Run workflow
+name: Daily kids video
+
+on:
+  schedule:
+    - cron: "0 14 * * *" # har kuni 14:00 UTC (Toshkent 19:00, AQSh sharqi 10:00)
+  workflow_dispatch:
+    inputs:
+      type:
+        description: "Video turi"
+        type: choice
+        options: [auto, story, education, facts]
+        default: auto
+      length:
+        description: "Uzunligi (daqiqa)"
+        default: "3"
+      privacy:
+        description: "YouTube holati"
+        type: choice
+        options: [public, unlisted, private]
+        default: public
+
+permissions:
+  contents: write # topics_used.json ni saqlash uchun
+
+concurrency:
+  group: daily-video
+  cancel-in-progress: false
+
+jobs:
+  video:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: video/package-lock.json
+
+      - name: Tizim paketlari (ffmpeg, Remotion uchun Chrome kutubxonalari)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg fonts-dejavu-core \
+            libnss3 libdbus-1-3 libatk1.0-0t64 libgbm-dev libasound2t64 libxrandr2 \
+            libxkbcommon-dev libxfixes3 libxcomposite1 libxdamage1 libatk-bridge2.0-0t64 \
+            libpango-1.0-0 libcairo2 libcups2t64
+
+      - name: Python va Remotion paketlari
+        run: |
+          pip install -q -r requirements.txt
+          cd video && npm ci && npx remotion browser ensure
+
+      - name: YouTube kalitlari
+        env:
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_TOKEN: ${{ secrets.YOUTUBE_TOKEN }}
+        run: |
+          printf '%s' "$YOUTUBE_CLIENT_SECRET" > client_secret.json
+          printf '%s' "$YOUTUBE_TOKEN" > token.json
+
+      - name: Video yaratish va yuklash
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          POLLINATIONS_KEY: ${{ secrets.POLLINATIONS_KEY }}
+          VIDEO_TYPE: ${{ inputs.type || vars.VIDEO_TYPE || 'auto' }}
+          VIDEO_LENGTH: ${{ inputs.length || vars.VIDEO_LENGTH || '3' }}
+          VIDEO_PRIVACY: ${{ inputs.privacy || vars.YOUTUBE_PRIVACY || 'public' }}
+        run: python -W ignore main.py --type "$VIDEO_TYPE" --length "$VIDEO_LENGTH" --privacy "$VIDEO_PRIVACY"
+
+      - name: Videoni yuklab olish uchun saqlash (7 kun)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-${{ github.run_number }}
+          path: |
+            output/*/final.mp4
+            output/*/thumbnail.jpg
+            output/*/script.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Ishlatilgan mavzularni saqlash
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add topics_used.json
+          git diff --cached --quiet || (git commit -m "Mavzular ro'yxati yangilandi [skip ci]" && git push)

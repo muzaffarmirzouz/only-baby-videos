@@ -1,0 +1,8 @@
+.venv/
+.env
+output/
+client_secret.json
+token.json
+__pycache__/
+video/public/jobs/
+.DS_Store

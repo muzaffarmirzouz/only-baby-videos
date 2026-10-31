@@ -1,0 +1,33 @@
+# Ssenariy uchun OpenAI modeli
+openai_model: gpt-4o-mini
+
+# Ovoz (edge-tts). Boshqa variantlar: en-US-AnaNeural (bola ovozi), en-GB-SoniaNeural, en-US-GuyNeural
+voice: en-US-JennyNeural
+voice_rate: "-10%"
+
+# Bolalar uchun sekinroq nutq: daqiqada taxminan so'zlar soni
+words_per_minute: 130
+words_per_scene: 45
+
+video:
+  width: 1920
+  height: 1080
+  music_volume: 0.12   # fon musiqasi ovozi (0..1)
+  render_concurrency: 2  # Remotion bir vaqtda nechta kadr chizadi (ko'p = tez, lekin kompyuter qiziydi)
+
+image_style: >-
+  cute colorful children's book illustration, soft lighting, friendly characters,
+  bright pastel colors, safe for kids, high detail, no text
+
+youtube:
+  privacy: private        # private | unlisted | public
+  made_for_kids: true     # COPPA: bolalar kontenti uchun majburiy
+  category_id: "27"       # 27 = Education, 1 = Film & Animation
+
+# Har video turi uchun media manbalari (tartib bo'yicha sinaladi):
+#   pixabay_video, pixabay_photo, pixabay_illustration, pixabay_all — Pixabay (PIXABAY_API_KEY)
+#   ai — Pollinations AI rasm (tekin rejimda 45 soniyada 1 ta)
+media:
+  story: [ai, pixabay_illustration]
+  education: [pixabay_illustration, pixabay_photo, ai]
+  facts: [pixabay_video, pixabay_photo, ai]

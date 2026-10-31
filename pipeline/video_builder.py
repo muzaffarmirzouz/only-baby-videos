@@ -70,6 +70,23 @@ def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, con
     shutil.rmtree(public, ignore_errors=True)
     if proc.returncode != 0:
         raise RuntimeError("Remotion render xatosi (yuqoridagi logga qarang)")
+    master_loudness(out_path)
+
+
+def master_loudness(path, target=-14.0):
+    """Ovozni YouTube standartiga (-14 LUFS) keltiradi; video qayta kodlanmaydi. Ikki bosqichli loudnorm."""
+    measure = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-i", str(path), "-af", f"loudnorm=I={target}:TP=-1.5:LRA=11:print_format=json",
+         "-vn", "-f", "null", "-"], capture_output=True, text=True)
+    start = measure.stderr.rindex("{")
+    m = json.loads(measure.stderr[start:measure.stderr.index("}", start) + 1])
+    af = (f"loudnorm=I={target}:TP=-1.5:LRA=11:measured_I={m['input_i']}:measured_TP={m['input_tp']}:"
+          f"measured_LRA={m['input_lra']}:measured_thresh={m['input_thresh']}:offset={m['target_offset']}:linear=true")
+    tmp = Path(path).with_suffix(".loud.mp4")
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(path), "-c:v", "copy", "-af", af,
+                    "-c:a", "aac", "-b:a", "192k", "-ar", "48000", str(tmp)], check=True)
+    tmp.replace(path)
+    print(f"  Ovoz: {float(m['input_i']):.1f} → {target:.0f} LUFS")
 
 
 def extract_frame(video, out_path, at=1.0):

@@ -12,7 +12,7 @@ words_per_scene: 45
 video:
   width: 1920
   height: 1080
-  music_volume: 0.12   # fon musiqasi ovozi (0..1)
+  music_volume: 0.16   # fon musiqasi ovozi (0..1); nutqdan ~15 dB past
   render_concurrency: 2  # Remotion bir vaqtda nechta kadr chizadi (ko'p = tez, lekin kompyuter qiziydi)
   crf: 16                # video sifati: kichik = sifatliroq (16 ≈ 8 Mbit/s, YouTube 1080p tavsiyasi)
 

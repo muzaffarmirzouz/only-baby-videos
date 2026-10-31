@@ -88,6 +88,14 @@ jobs:
           printf '%s' "$YOUTUBE_CLIENT_SECRET" > client_secret.json
           printf '%s' "$YOUTUBE_TOKEN" > token.json
 
+      - name: Fon musiqasi (yopiq repodan)
+        env:
+          MUSIC_TOKEN: ${{ secrets.MUSIC_TOKEN }}
+        run: |
+          if [ -z "$MUSIC_TOKEN" ]; then echo "MUSIC_TOKEN yo'q — musiqasiz"; exit 0; fi
+          git clone -q --depth 1 "https://x-access-token:${MUSIC_TOKEN}@github.com/${{ github.repository_owner }}/only-baby-music.git" assets/music \
+            && echo "Treklar: $(ls assets/music/*.mp3 | wc -l)" || echo "Musiqa olinmadi — musiqasiz davom etamiz"
+
       - name: Video yaratish va yuklash
         id: video
         env:

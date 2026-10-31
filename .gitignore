@@ -7,3 +7,6 @@ __pycache__/
 video/public/jobs/
 .DS_Store
 *.json.bak
+
+# Musiqa alohida yopiq repoda (only-baby-music) — YouTube fonotekasini tarqatish mumkin emas
+assets/music/

@@ -132,7 +132,7 @@ def main():
     tracks = sorted((ROOT / "assets" / "music").glob("*.mp3"))
     final = workdir / "final.mp4"
     video_builder.render(script, scenes, workdir, final, random.choice(tracks) if tracks else None,
-                         vcfg["music_volume"], vcfg.get("render_concurrency", 2))
+                         vcfg["music_volume"], vcfg.get("render_concurrency", 2), vcfg.get("crf", 16))
     thumb = workdir / "thumbnail.jpg"
     video_builder.thumbnail(workdir / "img_000.jpg", script["title"], thumb)
     print(f"  Tayyor: {final}  ({tts.audio_duration(final) / 60:.1f} daqiqa)")

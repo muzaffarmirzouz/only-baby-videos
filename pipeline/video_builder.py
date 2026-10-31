@@ -25,7 +25,7 @@ def font(size):
     return ImageFont.load_default()
 
 
-def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, concurrency=2):
+def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, concurrency=2, crf=16):
     """scenes: [{image, audio, duration, captions}] — workdir ichidagi fayllar.
 
     Remotion faqat public/ papkadagi fayllarni ko'radi, shuning uchun ular public/jobs/<nom>/ ga ko'chiriladi.
@@ -60,7 +60,7 @@ def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, con
 
     proc = subprocess.run(
         ["npx", "remotion", "render", "src/index.ts", "KidsVideo", str(out_path.resolve()),
-         f"--props={props_file.resolve()}", "--codec=h264", "--crf=20", f"--concurrency={concurrency}"],
+         f"--props={props_file.resolve()}", "--codec=h264", f"--crf={crf}", f"--concurrency={concurrency}"],
         cwd=REMOTION_DIR,
     )
     shutil.rmtree(public, ignore_errors=True)

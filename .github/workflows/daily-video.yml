@@ -98,6 +98,7 @@ jobs:
           VIDEO_FORMAT: ${{ inputs.format || (github.event.schedule == '0 14 * * *' && 'long') || 'short' }}
           VIDEO_LENGTH: ${{ inputs.length || vars.VIDEO_LENGTH || '' }}
           VIDEO_PRIVACY: ${{ inputs.privacy || vars.YOUTUBE_PRIVACY || 'public' }}
+          SCHEDULE_CRON: ${{ github.event.schedule }}
           VIDEO_TOPIC: ${{ inputs.topic }}
           VIDEO_REFERENCE: ${{ inputs.reference }}
           VIDEO_VOICE: ${{ inputs.voice || vars.VIDEO_VOICE || 'en-US-JennyNeural' }}

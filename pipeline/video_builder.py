@@ -54,6 +54,7 @@ def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, con
                 "captions": [{"start": a, "end": b, "text": t} for a, b, t in s["captions"]],
                 "motion": i % 4,
                 "quiz": {**s["quiz"], "answerAudio": publish(s["quiz"]["answerAudio"])} if s.get("quiz") else None,
+                "puppets": [{**pp, "src": publish(pp["src"])} for pp in s.get("puppets") or []],
             }
             for i, s in enumerate(scenes)
         ],
@@ -74,6 +75,21 @@ def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, con
 def extract_frame(video, out_path, at=1.0):
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(at), "-i", str(video), "-frames:v", "1",
                     "-q:v", "2", str(out_path)], check=True)
+
+
+def compose_cover(background, puppets, out_path):
+    """Multik muqovasi: fon + qahramonlar (Remotion'dagi joylashuvga yaqin)."""
+    bg = Image.open(background).convert("RGBA")
+    w, h = bg.size
+    xs = {"left": 0.25, "center": 0.5, "right": 0.75}
+    for pp in puppets:
+        sp = Image.open(pp["src"]).convert("RGBA")
+        k = h * (0.42 if h > w else 0.62) / sp.height
+        sp = sp.resize((int(sp.width * k), int(sp.height * k)))
+        if pp["position"] == "right":
+            sp = sp.transpose(Image.FLIP_LEFT_RIGHT)
+        bg.alpha_composite(sp, (int(w * xs[pp["position"]] - sp.width / 2), int(h * 0.97 - sp.height)))
+    bg.convert("RGB").save(out_path, "JPEG", quality=92)
 
 
 def thumbnail(image, title, out_path):

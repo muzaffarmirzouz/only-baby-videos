@@ -45,6 +45,7 @@ premium:
   enabled: true
   image_model: gpt-image-2      # arzonroq: gpt-image-1-mini
   image_quality: medium        # low | medium | high
+  sprite_model: gpt-image-1.5   # multik qahramonlari (shaffof fon)
   tts_model: gpt-4o-mini-tts
   tts_instructions: >-
     You are a warm, gentle and playful storyteller for young children.

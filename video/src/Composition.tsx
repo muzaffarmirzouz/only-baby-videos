@@ -29,8 +29,11 @@ type Quiz = {
   countdown: number;
   answerAudio: string;
 };
+// Multik qahramoni: fonsiz PNG, Remotion'da harakatlantiriladi
+type Puppet = { src: string; position: "left" | "center" | "right"; action: string; speaking: boolean };
 type Scene = {
   quiz?: Quiz | null;
+  puppets?: Puppet[];
   image: string;
   video: string | null;
   videoDuration: number | null;
@@ -148,9 +151,11 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
   const { fps, durationInFrames } = useVideoConfig();
   const p = frame / durationInFrames;
   // Multik: sahna "sakrab" kiradi va sekin chayqaladi
-  const enter = cartoon ? spring({ frame, fps, config: { damping: 8, mass: 0.7 } }) : 1;
-  const wobble = cartoon ? Math.sin(frame / 18) * 1.2 : 0;
-  const bob = cartoon ? Math.sin(frame / 11) * 0.6 : 0;
+  const hasPuppets = Boolean(scene.puppets?.length);
+  const playful = cartoon && !hasPuppets; // qahramonlar bo'lsa fon tinch turadi
+  const enter = playful ? spring({ frame, fps, config: { damping: 8, mass: 0.7 } }) : 1;
+  const wobble = playful ? Math.sin(frame / 18) * 1.2 : 0;
+  const bob = playful ? Math.sin(frame / 11) * 0.6 : 0;
 
   // Ken Burns harakati: yaqinlashish, uzoqlashish, o'ngga va chapga surilish
   const motions = [
@@ -194,9 +199,20 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
           />
         )}
       </AbsoluteFill>
+      {scene.puppets?.map((pp, k) => (
+        <PuppetView key={k} puppet={pp} index={k} vertical={vertical} />
+      ))}
       <Audio src={staticFile(scene.audio)} />
       {caption ? (
-        <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: vertical ? 380 : 60 }}>
+        <AbsoluteFill
+          style={{
+            // Qahramonlar bo'lsa subtitr ularning yuzini to'smasin: tikda tepasida, gorizontalda yuqorida
+            justifyContent: hasPuppets && !vertical ? "flex-start" : "flex-end",
+            alignItems: "center",
+            paddingTop: hasPuppets && !vertical ? 50 : 0,
+            paddingBottom: vertical ? (hasPuppets ? 960 : 380) : 60,
+          }}
+        >
           <div
             style={{
               maxWidth: vertical ? 940 : 1500,
@@ -346,6 +362,113 @@ const QuizScene: React.FC<{ scene: Scene; quiz: Quiz; vertical: boolean }> = ({ 
           </div>
         </AbsoluteFill>
       ) : null}
+    </AbsoluteFill>
+  );
+};
+
+const POS_X = { left: 0.25, center: 0.5, right: 0.75 };
+
+const PuppetView: React.FC<{ puppet: Puppet; index: number; vertical: boolean }> = ({ puppet, index, vertical }) => {
+  const frame = useCurrentFrame();
+  const { fps, width, height, durationInFrames } = useVideoConfig();
+  const t = frame / fps;
+  const delay = index * 6; // qahramonlar ketma-ket chiqadi
+  const f = Math.max(0, frame - delay);
+  const h = height * (vertical ? 0.42 : 0.62);
+  const baseX = width * POS_X[puppet.position];
+  const faceLeft = puppet.position === "right"; // o'ngdagilar markazga qaraydi
+  const pop = spring({ frame: f, fps, config: { damping: 10, mass: 0.6 } });
+  const seed = index * 1.7;
+
+  let x = baseX;
+  let y = 0; // yuqoriga (px)
+  let rot = 0;
+  let sx = 1;
+  let sy = 1;
+  let flip = faceLeft ? -1 : 1;
+  let scale = pop;
+
+  switch (puppet.action) {
+    case "walk_in":
+    case "run_across": {
+      const across = puppet.action === "run_across";
+      const fromLeft = puppet.position !== "right";
+      const start = fromLeft ? -width * 0.2 : width * 1.2;
+      const end = across ? (fromLeft ? width * 1.2 : -width * 0.2) : baseX;
+      const dur = across ? durationInFrames * 0.9 : fps * 1.4;
+      const k = interpolate(f, [0, dur], [0, 1], { extrapolateRight: "clamp" });
+      const walking = k < 1;
+      x = start + (end - start) * (across ? k : 1 - Math.pow(1 - k, 2));
+      y = walking ? Math.abs(Math.sin(t * (across ? 14 : 10))) * h * 0.05 : 0;
+      rot = walking ? Math.sin(t * (across ? 14 : 10)) * 4 : 0;
+      flip = fromLeft ? 1 : -1;
+      scale = 1;
+      break;
+    }
+    case "hop": {
+      const ph = Math.abs(Math.sin(t * 4 + seed));
+      y = ph * h * 0.12;
+      sy = 1 + (ph < 0.15 ? -0.08 : 0.03); // yerga tushganda siqiladi
+      sx = 2 - sy;
+      break;
+    }
+    case "wave":
+      rot = Math.sin(t * 6 + seed) * 7;
+      break;
+    case "spin":
+      flip *= Math.cos(t * 3 + seed) >= 0 ? 1 : -1;
+      sx = Math.max(0.15, Math.abs(Math.cos(t * 3 + seed)));
+      break;
+    case "peek": {
+      const k = spring({ frame: f, fps, config: { damping: 14 } });
+      y = -h * 0.55 * (1 - k) + Math.sin(t * 2 + seed) * h * 0.02;
+      scale = 1;
+      break;
+    }
+    case "bounce":
+      sy = 1 + Math.sin(t * 5 + seed) * 0.05;
+      sx = 1 - Math.sin(t * 5 + seed) * 0.03;
+      y = Math.max(0, Math.sin(t * 5 + seed)) * h * 0.04;
+      break;
+    default: // idle: nafas olish
+      sy = 1 + Math.sin(t * 2 + seed) * 0.015;
+  }
+
+  if (puppet.speaking) {
+    // gapirayotgan qahramon biroz tebranadi
+    sy *= 1 + Math.abs(Math.sin(t * 11)) * 0.035;
+    rot += Math.sin(t * 7) * 1.5;
+  }
+
+  const groundY = height * 0.97;
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      {/* soya */}
+      <div
+        style={{
+          position: "absolute",
+          left: x - h * 0.22,
+          top: groundY - h * 0.03,
+          width: h * 0.44,
+          height: h * 0.06,
+          borderRadius: "50%",
+          background: "rgba(0,0,0,0.22)",
+          transform: `scale(${Math.max(0.5, 1 - y / h)})`,
+          opacity: scale,
+        }}
+      />
+      <Img
+        src={staticFile(puppet.src)}
+        style={{
+          position: "absolute",
+          height: h,
+          left: x,
+          top: groundY - h - y,
+          transform: `translateX(-50%) rotate(${rot}deg) scale(${scale * sx * flip}, ${scale * sy})`,
+          transformOrigin: "50% 100%",
+          filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.25))",
+        }}
+      />
     </AbsoluteFill>
   );
 };

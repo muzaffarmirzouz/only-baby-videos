@@ -34,10 +34,23 @@ def load_topics():
     return json.loads(TOPICS_FILE.read_text()) if TOPICS_FILE.exists() else []
 
 
-def _rotation_index():
-    """Kun va soat bo'yicha: bir kundagi 4 ta video (06, 10, 14, 18 UTC) har xil turda bo'ladi."""
+# Kunlik taqsimot (UTC soat → turlar navbati): asosan multik
+SCHEDULE_TYPES = {
+    6: ["cartoon"],                      # Shorts, Toshkent 11:00
+    10: ["games", "education"],          # Shorts, Toshkent 15:00
+    14: ["cartoon", "story"],            # uzun video, Toshkent 19:00
+    18: ["cartoon"],                     # Shorts, Toshkent 23:00
+}
+
+
+def auto_type():
+    """Jadval bo'yicha tur; qo'lda ishga tushirilganda — kun bo'yicha asosan multik."""
     now = datetime.utcnow()
-    return now.timetuple().tm_yday * 24 + now.hour
+    day = now.timetuple().tm_yday
+    cron = os.getenv("SCHEDULE_CRON", "")  # GitHub jadvali kechiksa ham to'g'ri slot ("0 6 * * *" → 6)
+    hour = int(cron.split()[1]) if cron else now.hour
+    options = SCHEDULE_TYPES.get(hour) or ["cartoon", "cartoon", "story", "games", "education", "facts"]
+    return options[day % len(options)]
 
 
 def slug(text):
@@ -83,7 +96,7 @@ def main():
             ref = reference.fetch(args.reference)
             print(f"  Namuna: {ref['title']} ({ref['channel']}, {ref['minutes']} daq)")
         if args.type == "auto":
-            args.type = writer.pick_type(ref) if ref else VIDEO_TYPES[_rotation_index() % len(VIDEO_TYPES)]
+            args.type = writer.pick_type(ref) if ref else auto_type()
         print(f"[1/5] Ssenariy yozilmoqda ({args.type}, {args.length} daqiqa)...")
         script = writer.write(args.type, args.length, args.topic, load_topics(), reference=ref,
                               short=args.format == "short")
@@ -149,6 +162,27 @@ def main():
         print("  ! media topilmadi, zaxira fon ishlatildi")
         return None
 
+    # Multik: qahramonlar bir marta, fonsiz chiziladi va har sahnada harakatlantiriladi
+    sprites = {}
+    if premium and script.get("type") == "cartoon" and script.get("cast"):
+        print(f"  Qahramonlar chizilmoqda: {', '.join(c['name'] for c in script['cast'])}")
+        try:
+            for c in script["cast"]:
+                path = workdir / f"sprite_{slug(c['name'])}.png"
+                if not path.exists():
+                    premium.sprite(c["look"], style, path)
+                sprites[c["name"]] = path
+        except Exception as e:
+            print(f"  ! qahramonlarni chizib bo'lmadi ({e}) — oddiy rasmlar ishlatiladi")
+            sprites = {}
+
+    def puppets_for(scene):
+        cast = [c for c in scene.get("cast") or [] if c.get("name") in sprites][:3]
+        return [{"src": sprites[c["name"]],
+                 "position": c.get("position") if c.get("position") in ("left", "center", "right") else "center",
+                 "action": c.get("action") or "idle",
+                 "speaking": c["name"] == scene.get("speaker")} for c in cast]
+
     scenes = []
     n = len(script["scenes"])
     for i, scene in enumerate(script["scenes"]):
@@ -160,15 +194,27 @@ def main():
             dur = tts.audio_duration(audio)
         else:
             dur = tts.synthesize(scene["narration"], audio, cfg["voice"], cfg["voice_rate"], premium=premium)
+        puppets = puppets_for(scene) if sprites and scene.get("background_prompt") else []
         if clip.exists():
             clip_dur = tts.audio_duration(clip)
         elif img.exists():
             clip_dur = None
+        elif puppets:
+            clip_dur = None
+            try:
+                premium.image(f"{scene['background_prompt']}. Empty background scene with NO characters, animals or "
+                              f"people, room in the lower half for characters to stand. Style: {style}",
+                              img, vcfg["width"], vcfg["height"])
+            except Exception as e:
+                print(f"  ! fon chizilmadi ({e}) — oddiy rasm")
+                puppets = []
+                clip_dur = fetch_media(scene, i, img, clip)
         else:
             clip_dur = fetch_media(scene, i, img, clip)
         item = {"image": img, "audio": audio, "duration": dur,
                 "video": clip if clip_dur else None, "video_duration": clip_dur,
-                "captions": tts.caption_chunks(scene["narration"], dur)}
+                "captions": tts.caption_chunks(scene["narration"], dur),
+                "puppets": puppets}
         if scene.get("quiz"):
             # Savol → taymer → javob: javob ovozi alohida, taymerdan keyin boshlanadi
             answer_audio = workdir / f"answer_{i:03d}.mp3"
@@ -195,11 +241,15 @@ def main():
     final = workdir / "final.mp4"
     video_builder.render(script, scenes, workdir, final, random.choice(tracks) if tracks else None,
                          vcfg["music_volume"], vcfg.get("render_concurrency", 2), vcfg.get("crf", 16))
+    cover = workdir / "img_000.jpg"
+    if scenes and scenes[0]["puppets"]:  # multikda fon + qahramonlar
+        cover = workdir / "cover.jpg"
+        video_builder.compose_cover(scenes[0]["image"], scenes[0]["puppets"], cover)
     if short:
-        thumb = workdir / "img_000.jpg"  # Shorts'ga YouTube o'z muqovasini qo'yadi; bu faqat Telegram uchun
+        thumb = cover  # Shorts'ga YouTube o'z muqovasini qo'yadi; bu faqat Telegram uchun
     else:
         thumb = workdir / "thumbnail.jpg"
-        video_builder.thumbnail(workdir / "img_000.jpg", script["title"], thumb)
+        video_builder.thumbnail(cover, script["title"], thumb)
     print(f"  Tayyor: {final}  ({tts.audio_duration(final) / 60:.1f} daqiqa)")
     cost = premium.cost if premium else 0.0
     if premium:

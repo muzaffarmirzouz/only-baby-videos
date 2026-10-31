@@ -29,6 +29,16 @@ For quiz scenes, "narration" reads the question and the three options (A, B, C) 
 The image_prompt / search_query must show the CORRECT answer (it is revealed after the countdown).
 Intro and goodbye scenes have no "quiz" field."""
 
+# Multik: qahramonlar alohida chiziladi va Remotion'da harakatlantiriladi ("qo'g'irchoq" animatsiya)
+CARTOON_ACTIONS = ["walk_in", "run_across", "hop", "wave", "bounce", "spin", "peek", "idle"]
+CARTOON_FORMAT = """This is an animated cartoon: characters are separate puppets moved over a background.
+For EVERY scene also add:
+  "background_prompt": the place only, with NO characters or animals in it (e.g. "sunny meadow with a big apple tree and a picnic blanket"),
+  "cast": 1-3 characters on screen, each {"name": exact name from the cast list, "position": "left" | "center" | "right",
+          "action": one of %s},
+  "speaker": name of the character who talks in this scene, or "narrator".
+Choose actions that match the story (walk_in when arriving, hop when happy, wave when greeting, peek when shy or hiding).""" % CARTOON_ACTIONS
+
 SCENE_SECONDS = {"games": 22}  # savol + 5 soniya taymer + javob
 
 SHORT_WORDS_PER_SCENE = 22
@@ -90,6 +100,9 @@ Reference:
 {reference_text(reference)}
 """
         fmt = SHORT_GUIDE if short else ""
+        cartoon = video_type == "cartoon"
+        cast_field = ('\n  "cast": list of 2-3 main characters, each {{"name": short name, "look": full visual description '
+                      '(species, colors, clothes, accessories)}},') if cartoon else ""
         outline = self._ask(
             SAFETY_RULES,
             f"""Plan a {"YouTube Short (vertical, under 60 seconds)" if short else f"{minutes}-minute"} kids video. Type: {TYPE_GUIDES[video_type]}{fmt}{ref}
@@ -99,7 +112,7 @@ Return JSON:
   "title": catchy YouTube title under 70 characters,
   "description": YouTube description, 2-3 short paragraphs, kid and parent friendly,
   "tags": list of 10-15 tags,
-  "characters": visual description of the main characters (species, colors, clothes) to keep images consistent, or "" if none,
+  "characters": visual description of the main characters (species, colors, clothes) to keep images consistent, or "" if none,{cast_field}
   "parts": list of exactly {n_parts} objects {{"summary": what happens or is taught in this part}}}}""",
         )
 
@@ -132,6 +145,10 @@ Return JSON:
                 rules = f"{QUIZ_FORMAT}\n{first}{last}EVERY other scene MUST be a quiz scene with the quiz and answer_narration fields."
             if short:
                 rules += "\nimage_prompt: vertical portrait composition, subject in the center."
+            if cartoon:
+                names = [c["name"] for c in outline.get("cast", [])]
+                rules += f"\n{CARTOON_FORMAT}\nCast list: {json.dumps(names)}"
+                example = example[:-1] + ', "background_prompt": "...", "cast": [{"name": "...", "position": "left", "action": "hop"}], "speaker": "..."}' 
             data = self._ask_scenes(games, has_intro, has_outro,
                 SAFETY_RULES,
                 f"""Video title: {outline["title"]}

@@ -82,6 +82,7 @@ jobs:
           printf '%s' "$YOUTUBE_TOKEN" > token.json
 
       - name: Video yaratish va yuklash
+        id: video
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
@@ -96,6 +97,31 @@ jobs:
           args=(--type "$VIDEO_TYPE" --length "$VIDEO_LENGTH" --privacy "$VIDEO_PRIVACY" --voice "$VIDEO_VOICE" --style "$VIDEO_STYLE")
           if [ -n "$VIDEO_TOPIC" ]; then args+=(--topic "$VIDEO_TOPIC"); fi
           python -W ignore main.py "${args[@]}"
+
+      - name: Telegram xabarnomasi
+        if: always()
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OUTCOME: ${{ steps.video.outcome }}
+          TITLE: ${{ steps.video.outputs.title }}
+          VIDEO_URL: ${{ steps.video.outputs.video_url }}
+          THUMB: ${{ steps.video.outputs.thumbnail }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then echo "Telegram sozlanmagan"; exit 0; fi
+          api="https://api.telegram.org/bot$TG_TOKEN"
+          if [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
+            caption=$(printf '✅ Yangi video yuklandi!\n\n%s\n%s' "$TITLE" "$VIDEO_URL")
+            if [ -f "$THUMB" ]; then
+              curl -s -o /dev/null -F chat_id="$TG_CHAT" -F photo=@"$THUMB" -F caption="$caption" "$api/sendPhoto"
+            else
+              curl -s -o /dev/null -d chat_id="$TG_CHAT" --data-urlencode text="$caption" "$api/sendMessage"
+            fi
+          else
+            text=$(printf '❌ Video yasashda xato bo'"'"'ldi.\n\nLog: %s' "$RUN_URL")
+            curl -s -o /dev/null -d chat_id="$TG_CHAT" --data-urlencode text="$text" "$api/sendMessage"
+          fi
 
       - name: Videoni yuklab olish uchun saqlash (7 kun)
         if: always()

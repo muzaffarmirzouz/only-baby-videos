@@ -147,6 +147,11 @@ def main():
     print("YouTube'ga yuklanmoqda...")
     vid = upload(final, script, thumb, cfg["youtube"])
     print(f"  Yuklandi: https://youtu.be/{vid}  (holat: {cfg['youtube']['privacy']})")
+    gh_output = os.getenv("GITHUB_OUTPUT")
+    if gh_output:  # keyingi qadam (Telegram xabarnomasi) uchun
+        with open(gh_output, "a") as f:
+            f.write(f"video_url=https://youtu.be/{vid}\nthumbnail={thumb}\n")
+            f.write(f"title<<__EOT__\n{script['title']}\n__EOT__\n")
     summary = os.getenv("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a") as f:

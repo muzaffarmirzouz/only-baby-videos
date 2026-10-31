@@ -1,0 +1,16 @@
+name = "only-baby-bot"
+main = "src/worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+GITHUB_REPO = "muzaffarmirzouz/only-baby-videos"
+# ALLOWED_USER_ID deploy paytida .env dagi TELEGRAM_CHAT_ID dan beriladi (scripts/setup_bot.sh)
+
+# app.html ni matn sifatida import qilish
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+# Maxfiy kalitlar (wrangler secret put bilan qo'yiladi, bu yerda yozilmaydi):
+#   TELEGRAM_BOT_TOKEN, GITHUB_TOKEN, WEBHOOK_SECRET

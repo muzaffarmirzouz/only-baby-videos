@@ -177,7 +177,11 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
   const capStart = caption ? Math.round(caption.start * fps) : 0;
   const pop = spring({ frame: frame - capStart, fps, config: { damping: 12 } });
 
-  const cam = hasPuppets ? cameraAt(frame, fps, scene.puppets!, vertical, width, height) : { z: 1, x: 0, y: 0 };
+  // AI animatsiya klipi bo'lsa: avval klip, keyin "kadr almashib" qo'g'irchoq animatsiya davom etadi
+  const clipFrames = scene.video && scene.videoDuration ? Math.floor(scene.videoDuration * fps) - 1 : 0;
+  const aiClip = hasPuppets && clipFrames > 0 && frame < clipFrames;
+  const showPuppets = hasPuppets && !aiClip;
+  const cam = showPuppets ? cameraAt(frame, fps, scene.puppets!, vertical, width, height) : { z: 1, x: 0, y: 0 };
   const speaker = scene.puppets?.find((pp) => pp.speaking);
   const speakerX = speaker ? puppetLayout(speaker.position, scene.puppets!.length, vertical, width, height).x : null;
 
@@ -185,7 +189,9 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
     <AbsoluteFill style={{ opacity }}>
       <AbsoluteFill style={{ overflow: "hidden" }}>
        <AbsoluteFill style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.z})` }}>
-        {scene.video && scene.videoDuration ? (
+        {aiClip ? (
+          <OffthreadVideo src={staticFile(scene.video!)} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : scene.video && scene.videoDuration && !hasPuppets ? (
           // Pixabay klipi: sahnadan qisqa bo'lsa takrorlanadi, o'z ovozi o'chirilgan
           <Loop durationInFrames={Math.max(1, Math.floor(scene.videoDuration * fps) - 1)}>
             <OffthreadVideo
@@ -206,7 +212,7 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
           />
         )}
       {/* o'rtadagi qahramon orqada (birinchi chiziladi), chetdagilar oldinda */}
-      {[...(scene.puppets ?? []).map((pp, k) => ({ pp, k }))]
+      {[...(showPuppets ? scene.puppets! : []).map((pp, k) => ({ pp, k }))]
         .sort((a, b) => Number(b.pp.position === "center") - Number(a.pp.position === "center"))
         .map(({ pp, k }) => (
           <PuppetView key={k} puppet={pp} index={k} count={scene.puppets!.length} vertical={vertical} lookAtX={speakerX} />

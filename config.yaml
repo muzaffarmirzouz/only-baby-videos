@@ -51,3 +51,11 @@ premium:
     You are a warm, gentle and playful storyteller for young children.
     Speak clearly and a little slowly, with lots of expression, smiles and wonder in your voice.
     Make character lines lively, and slow down for the gentle moral at the end.
+
+# Haqiqiy AI animatsiya (Google Gemini Omni, GEMINI_API_KEY). Multikning 2 ta sahnasi jonlanadi.
+animate:
+  enabled: true
+  model: gemini-omni-1.1-flash
+  resolution: 360p        # 360p ≈ $0.034/s, 720p ≈ $0.10/s
+  seconds: 5
+  scenes_per_video: 2

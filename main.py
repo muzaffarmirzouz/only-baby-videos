@@ -17,7 +17,7 @@ from pathlib import Path
 import yaml
 from dotenv import load_dotenv
 
-from pipeline import images, premium as premium_mod, stock, tts, video_builder
+from pipeline import animate, images, premium as premium_mod, stock, tts, video_builder
 
 ROOT = Path(__file__).resolve().parent
 TOPICS_FILE = ROOT / "topics_used.json"
@@ -54,6 +54,34 @@ def auto_type():
 
 
 CHARACTERS_DIR = ROOT / "assets" / "characters"
+
+
+ACTION_WORDS = {"walk_in": "walks in", "run_across": "runs happily", "hop": "hops with joy", "wave": "waves hello",
+                "bounce": "bounces", "spin": "spins around", "peek": "peeks out shyly", "idle": "smiles and sways"}
+
+
+def animate_scenes(script, scenes, workdir, animator, short):
+    """Multikning 1-sahnasi va eng harakatli sahnasini haqiqiy AI animatsiyaga aylantiradi."""
+    candidates = [i for i, s in enumerate(scenes) if s.get("puppets")]
+    if not candidates:
+        return
+    def liveliness(i):
+        return sum(pp["action"] != "idle" for pp in scenes[i]["puppets"]) + any(pp["speaking"] for pp in scenes[i]["puppets"])
+    chosen = [candidates[0]] + sorted(candidates[1:], key=liveliness, reverse=True)
+    chosen = chosen[:animator.cfg.get("scenes_per_video", 2)]
+    for i in chosen:
+        item, scene = scenes[i], script["scenes"][i]
+        clip = workdir / f"anim_{i:03d}.mp4"
+        if not clip.exists():
+            start = workdir / f"anim_start_{i:03d}.jpg"
+            video_builder.compose_cover(item["image"], item["puppets"], start)
+            cast = {c["name"]: c.get("action", "idle") for c in scene.get("cast") or []}
+            acts = ", ".join(f"{n} {ACTION_WORDS.get(a, 'smiles')}" for n, a in cast.items())
+            mood = scene["narration"].split(".")[0][:160]
+            print(f"  Animatsiya: sahna {i + 1} ({acts})")
+            if not animator.animate(start, f"{acts}. Moment: {mood}.", clip, short):
+                continue
+        item["video"], item["video_duration"] = clip, tts.audio_duration(clip)
 
 
 def load_series():
@@ -256,6 +284,10 @@ def main():
             })
         scenes.append(item)
 
+    animator = animate.Animator(cfg.get("animate", {}))
+    if animator.enabled and not args.free:
+        animate_scenes(script, scenes, workdir, animator, short)
+
     print("[4/5] Remotion bilan video montaj qilinmoqda...")
     tracks = sorted((ROOT / "assets" / "music").glob("*.mp3"))
     final = workdir / "final.mp4"
@@ -271,7 +303,7 @@ def main():
         thumb = workdir / "thumbnail.jpg"
         video_builder.thumbnail(cover, script["title"], thumb)
     print(f"  Tayyor: {final}  ({tts.audio_duration(final) / 60:.1f} daqiqa)")
-    cost = premium.cost if premium else 0.0
+    cost = (premium.cost if premium else 0.0) + animator.cost
     if premium:
         print(f"  Rasm va ovoz xarajati: ~${cost:.2f} (+ ssenariy ~$0.01)")
 

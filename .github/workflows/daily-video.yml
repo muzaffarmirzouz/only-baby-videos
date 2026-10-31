@@ -102,6 +102,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           POLLINATIONS_KEY: ${{ secrets.POLLINATIONS_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           VIDEO_TYPE: ${{ inputs.type || vars.VIDEO_TYPE || 'auto' }}
           VIDEO_FORMAT: ${{ inputs.format || (github.event.schedule == '0 14 * * *' && 'long') || 'short' }}
           VIDEO_LENGTH: ${{ inputs.length || vars.VIDEO_LENGTH || '' }}

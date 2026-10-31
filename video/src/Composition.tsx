@@ -48,6 +48,7 @@ export type Props = {
   title: string;
   kind: string;
   vertical: boolean; // Shorts: 1080x1920
+  showCaptions?: boolean; // ekrandagi subtitrlar (standart: yo'q)
   music: string | null;
   musicVolume: number;
   scenes: Scene[];
@@ -86,7 +87,9 @@ export const MyComposition = () => {
   );
 };
 
-export const KidsVideo: React.FC<Props> = ({ title, kind, vertical, music, musicVolume, scenes }) => {
+export const KidsVideo: React.FC<Props> = ({ title, kind, vertical, showCaptions, music, musicVolume, scenes: allScenes }) => {
+  // Subtitrsiz rejim: kichik bolalar o'qiy olmaydi, matn esa rasmni to'sadi
+  const scenes = showCaptions ? allScenes : allScenes.map((s) => ({ ...s, captions: [] }));
   return (
     <AbsoluteFill style={{ backgroundColor: "#fff4d6" }}>
       {music ? <Audio src={staticFile(music)} volume={musicVolume} loop /> : null}

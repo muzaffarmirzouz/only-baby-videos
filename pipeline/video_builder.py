@@ -25,7 +25,7 @@ def font(size):
     return ImageFont.load_default()
 
 
-def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, concurrency=2, crf=16):
+def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, concurrency=2, crf=16, captions=False):
     """scenes: [{image, audio, duration, captions}] — workdir ichidagi fayllar.
 
     Remotion faqat public/ papkadagi fayllarni ko'radi, shuning uchun ular public/jobs/<nom>/ ga ko'chiriladi.
@@ -41,6 +41,7 @@ def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, con
     props = {
         "title": script["title"],
         "kind": script.get("type", "story"),
+        "showCaptions": captions,
         "vertical": script.get("format") == "short",
         "music": publish(music) if music else None,
         "musicVolume": music_volume,

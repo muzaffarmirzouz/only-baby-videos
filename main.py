@@ -320,7 +320,8 @@ def main():
     tracks = sorted((ROOT / "assets" / "music").glob("*.mp3"))
     final = workdir / "final.mp4"
     video_builder.render(script, scenes, workdir, final, random.choice(tracks) if tracks else None,
-                         vcfg["music_volume"], vcfg.get("render_concurrency", 2), vcfg.get("crf", 16))
+                         vcfg["music_volume"], vcfg.get("render_concurrency", 2), vcfg.get("crf", 16),
+                         vcfg.get("captions", False))
     cover = workdir / "img_000.jpg"
     if scenes and scenes[0]["puppets"]:  # multikda fon + qahramonlar
         cover = workdir / "cover.jpg"

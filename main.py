@@ -85,6 +85,33 @@ def animate_scenes(script, scenes, workdir, animator, short):
         item["video"], item["video_duration"] = clip, tts.audio_duration(clip)
 
 
+def publish_dir(d, cfg, privacy=None):
+    """Tasdiqlangan videoni yuklaydi. YouTube limiti tugasa 3-kod bilan chiqadi (workflow navbatga qo'yadi)."""
+    from pipeline import pending
+    from pipeline.uploader import upload
+    script = json.loads((d / "script.json").read_text())
+    thumb = d / "thumbnail.jpg"
+    if privacy:
+        cfg["youtube"]["privacy"] = privacy
+    short = script.get("format") == "short"
+    try:
+        vid = upload(d / "final.mp4", script, None if short or not thumb.exists() else thumb, cfg["youtube"])
+    except Exception as e:
+        if pending.is_limit_error(e):
+            print("  ⏳ YouTube kunlik limiti tugadi")
+            raise SystemExit(3)
+        raise
+    print(f"  Yuklandi: https://youtu.be/{vid}")
+    topics = load_topics()
+    topics.append(script.get("topic", script["title"]))
+    TOPICS_FILE.write_text(json.dumps(topics, indent=2, ensure_ascii=False))
+    gh_output = os.getenv("GITHUB_OUTPUT")
+    if gh_output:
+        with open(gh_output, "a") as f:
+            f.write(f"video_url=https://youtu.be/{vid}\n")
+            f.write(f"title<<__EOT__\n{script['title']}\n__EOT__\n")
+
+
 def load_series():
     f = CHARACTERS_DIR / "cast.yaml"
     return yaml.safe_load(f.read_text()) if f.exists() else None
@@ -111,11 +138,16 @@ def main():
     ap.add_argument("--voice", help="edge-tts ovozi, masalan en-US-AnaNeural (bo'lmasa config.yaml dagisi)")
     ap.add_argument("--reference", help="yoqqan YouTube video havolasi — shu formatda original video yasaladi")
     ap.add_argument("--free", action="store_true", help="pullik rejimni o'chirish (faqat tekin xizmatlar)")
+    ap.add_argument("--review", action="store_true",
+                    help="yuklamaslik: avval Telegram'da ko'rsatish (bot/panel buyurtmalari)")
+    ap.add_argument("--publish-dir", help="tasdiqlangan tayyor video papkasini (final.mp4 + script.json) yuklash")
     ap.add_argument("--upload-pending", action="store_true",
                     help="faqat navbatdagi (limit tufayli kutayotgan) videolarni yuklash")
     ap.add_argument("--style", choices=["auto", "stock", "ai"], default="auto",
                     help="stock = Pixabay video/rasm, ai = AI rasm, auto = config.yaml dagi tartib")
     args = ap.parse_args()
+    if args.publish_dir:
+        return publish_dir(Path(args.publish_dir), cfg, args.privacy)
     if args.upload_pending:
         from pipeline import pending
         from pipeline.uploader import upload
@@ -347,6 +379,16 @@ def main():
 
     if args.no_upload:
         return  # sinov — mavzular ro'yxatiga yozilmaydi
+    if args.review:
+        # Buyurtma: avval Telegram'da ko'rsatiladi, "Joyla" bosilgandan keyin publish.yml yuklaydi
+        preview = video_builder.preview(final, workdir / "preview.mp4")
+        gh_output = os.getenv("GITHUB_OUTPUT")
+        if gh_output:
+            with open(gh_output, "a") as f:
+                f.write(f"review=1\npreview={preview}\nthumbnail={thumb}\ncost={cost:.2f}\n")
+                f.write(f"title<<__EOT__\n{script['title']}\n__EOT__\n")
+        print(f"  Ko'rib chiqish uchun tayyor: {preview}")
+        return
 
     topics = load_topics()
     topics.append(script.get("topic", script["title"]))

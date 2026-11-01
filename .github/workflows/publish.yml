@@ -1,0 +1,121 @@
+# Bot'dagi "✅ YouTube'ga joyla" tugmasi: ko'rib chiqilgan (review-*) videoni YouTube'ga yuklaydi.
+name: Publish reviewed video
+run-name: "Joylash (buyurtma ${{ inputs.run_id }})"
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Video yasagan run ID"
+        required: true
+      privacy:
+        description: "YouTube holati"
+        type: choice
+        options: [public, unlisted, private]
+        default: public
+
+permissions:
+  contents: write # topics_used.json
+  actions: write # review artifact'ini o'chirish
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Python paketlari
+        run: pip install -q -r requirements.txt
+
+      - name: YouTube kalitlari
+        env:
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_TOKEN: ${{ secrets.YOUTUBE_TOKEN }}
+        run: |
+          printf '%s' "$YOUTUBE_CLIENT_SECRET" > client_secret.json
+          printf '%s' "$YOUTUBE_TOKEN" > token.json
+
+      - name: Tasdiqlangan videoni olish
+        id: get
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          gh run download "$RUN_ID" --pattern 'review-*' -D review
+          video=$(find review -name final.mp4 | head -1)
+          if [ -z "$video" ]; then echo "Video topilmadi (o'chirilgan yoki 7 kun o'tgan)"; exit 1; fi
+          echo "dir=$(dirname "$video")" >> "$GITHUB_OUTPUT"
+
+      - name: YouTube'ga yuklash
+        id: pub
+        env:
+          VIDEO_PRIVACY: ${{ inputs.privacy }}
+        run: |
+          set +e
+          python -W ignore main.py --publish-dir "${{ steps.get.outputs.dir }}" --privacy "$VIDEO_PRIVACY"
+          code=$?
+          if [ $code -eq 3 ]; then echo "limit=1" >> "$GITHUB_OUTPUT"; exit 0; fi
+          exit $code
+
+      - name: Limit tugagan bo'lsa — navbatga (keyingi ishga tushishda yuklanadi)
+        if: steps.pub.outputs.limit == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: queued-publish-${{ github.run_number }}
+          path: review
+          retention-days: 7
+
+      - name: Ko'rib chiqish nusxasini o'chirish
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" -q '.artifacts[] | select(.name | startswith("review-")) | .id'); do
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+          done
+
+      - name: Telegram xabarnomasi
+        if: always()
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OUTCOME: ${{ job.status }}
+          LIMIT: ${{ steps.pub.outputs.limit }}
+          TITLE: ${{ steps.pub.outputs.title }}
+          VIDEO_URL: ${{ steps.pub.outputs.video_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then exit 0; fi
+          if [ "$LIMIT" = "1" ]; then
+            text="⏳ YouTube bugungi yuklash limiti tugadi — video navbatga qo'yildi va keyingi ishga tushishda avtomatik yuklanadi."
+          elif [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
+            text=$(printf '✅ Kanalga joylandi!\n\n%s\n%s' "$TITLE" "$VIDEO_URL")
+          else
+            text=$(printf '❌ Joylashda xato bo'"'"'ldi.\n\nLog: %s' "$RUN_URL")
+          fi
+          curl -s -o /dev/null -d chat_id="$TG_CHAT" --data-urlencode text="$text" "https://api.telegram.org/bot$TG_TOKEN/sendMessage"
+
+      - name: Ishlatilgan mavzularni saqlash
+        if: success() && steps.pub.outputs.video_url != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch -q origin main
+          git show origin/main:topics_used.json > /tmp/remote_topics.json
+          python - <<'EOF'
+          import json
+          remote = json.load(open("/tmp/remote_topics.json"))
+          local = json.load(open("topics_used.json"))
+          merged = remote + [t for t in local if t not in remote]
+          json.dump(merged, open("topics_used.json", "w"), indent=2, ensure_ascii=False)
+          EOF
+          git reset -q --soft origin/main
+          git add topics_used.json
+          git diff --cached --quiet || (git commit -m "Mavzular ro'yxati yangilandi [skip ci]" && git push origin HEAD:main)

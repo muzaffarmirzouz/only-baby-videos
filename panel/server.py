@@ -59,7 +59,7 @@ def create_video(data):
     if fmt == "long" and (not length.isdigit() or not 1 <= int(length) <= 30):
         raise ValueError("Uzunlik 1–30 daqiqa bo'lishi kerak")
     gh("workflow", "run", WORKFLOW, "-f", f"format={fmt}", "-f", f"type={vtype}", "-f", f"length={length}", "-f", f"topic={topic}", "-f", f"reference={reference}",
-       "-f", f"style={style}", "-f", f"voice={voice}", "-f", f"privacy={privacy}")
+       "-f", f"style={style}", "-f", "review=true", "-f", f"voice={voice}", "-f", f"privacy={privacy}")
     return {"ok": True}
 
 

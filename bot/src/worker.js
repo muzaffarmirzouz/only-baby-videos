@@ -73,6 +73,7 @@ async function createVideo(env, o) {
     style: STYLES.includes(o.style) ? o.style : "auto",
     voice: VOICES.includes(o.voice) ? o.voice : VOICES[0],
     privacy: PRIVACY.includes(o.privacy) ? o.privacy : "public",
+    review: "true", // buyurtmalar avval Telegram'da ko'rsatiladi, "Joyla" bosilganda yuklanadi
   };
   await github(env, `/actions/workflows/${WORKFLOW}/dispatches`, {
     method: "POST",
@@ -196,6 +197,10 @@ async function handleUpdate(update, env, origin) {
 
   const cq = update.callback_query;
   if (!allowed) return tg(env, "answerCallbackQuery", { callback_query_id: cq.id, text: "Ruxsat yo'q" });
+
+  // Ko'rib chiqilgan video: "✅ Joyla" / "🗑 O'chir"
+  const review = /^(pub|del):(\d+)$/.exec(cq.data || "");
+  if (review) return handleReview(env, cq, review[1], review[2]);
   const chat_id = cq.message.chat.id;
   const message_id = cq.message.message_id;
   const topic = topicFrom(cq.message.text);
@@ -218,13 +223,39 @@ async function handleUpdate(update, env, origin) {
       await createVideo(env, { topic, type, length, reference, format: short ? "short" : "long" });
       await tg(env, "editMessageText", {
         chat_id, message_id,
-        text: `${head}\nTuri: ${TYPES[type]} · ${short ? "Shorts" : `${length} daqiqa`}\n\n✅ Buyurtma qabul qilindi! Tayyor bo'lganda xabar beraman.`,
+        text: `${head}\nTuri: ${TYPES[type]} · ${short ? "Shorts" : `${length} daqiqa`}\n\n✅ Buyurtma qabul qilindi! Tayyor bo'lganda videoni shu yerga yuboraman — ko'rib, "Joyla" deb tasdiqlaysiz.`,
       });
     } catch (e) {
       await tg(env, "editMessageText", { chat_id, message_id, text: `${head}\n\n❌ Xato: ${e.message}` });
     }
   }
   return tg(env, "answerCallbackQuery", { callback_query_id: cq.id });
+}
+
+async function handleReview(env, cq, action, runId) {
+  const chat_id = cq.message.chat.id;
+  const message_id = cq.message.message_id;
+  const title = (cq.message.caption || "").split("\n").filter(Boolean)[1] || "Video";
+  const setCaption = (caption) =>
+    tg(env, "editMessageCaption", { chat_id, message_id, caption, reply_markup: { inline_keyboard: [] } });
+  try {
+    if (action === "pub") {
+      await github(env, "/actions/workflows/publish.yml/dispatches", {
+        method: "POST",
+        body: JSON.stringify({ ref: "main", inputs: { run_id: runId } }),
+      });
+      await setCaption(`${title}\n\n⏳ YouTube'ga joylanmoqda... Tayyor bo'lganda havolasini yuboraman.`);
+      return tg(env, "answerCallbackQuery", { callback_query_id: cq.id, text: "Joylanmoqda ✅" });
+    }
+    const arts = await github(env, `/actions/runs/${runId}/artifacts`);
+    for (const a of arts.artifacts.filter((x) => x.name.startsWith("review-"))) {
+      await github(env, `/actions/artifacts/${a.id}`, { method: "DELETE" });
+    }
+    await setCaption(`${title}\n\n🗑 O'chirildi — kanalga joylanmaydi.`);
+    return tg(env, "answerCallbackQuery", { callback_query_id: cq.id, text: "O'chirildi" });
+  } catch (e) {
+    return tg(env, "answerCallbackQuery", { callback_query_id: cq.id, text: `Xato: ${String(e.message).slice(0, 150)}`, show_alert: true });
+  }
 }
 
 function runIcon(r) {

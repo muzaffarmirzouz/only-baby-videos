@@ -91,6 +91,18 @@ def master_loudness(path, target=-14.0):
     print(f"  Ovoz: {float(m['input_i']):.1f} → {target:.0f} LUFS")
 
 
+def preview(video, out_path, max_mb=45):
+    """Telegram uchun siqilgan nusxa (bot 50 MB dan katta fayl yubora olmaydi)."""
+    for crf in (28, 33, 38):
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(video),
+                        "-vf", "scale='if(gt(iw,ih),1280,720)':-2", "-c:v", "libx264", "-preset", "veryfast",
+                        "-crf", str(crf), "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", str(out_path)],
+                       check=True)
+        if Path(out_path).stat().st_size < max_mb * 1024 * 1024:
+            break
+    return out_path
+
+
 def extract_frame(video, out_path, at=1.0):
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(at), "-i", str(video), "-frames:v", "1",
                     "-q:v", "2", str(out_path)], check=True)

@@ -45,6 +45,11 @@ on:
         type: choice
         options: [auto, stock, ai]
         default: auto
+      review:
+        description: "Avval Telegram'da ko'rsatish (yuklash faqat tasdiqlangandan keyin)"
+        type: choice
+        options: ["false", "true"]
+        default: "false"
 
 permissions:
   contents: write # topics_used.json ni saqlash uchun
@@ -119,6 +124,7 @@ jobs:
           VIDEO_LENGTH: ${{ inputs.length || vars.VIDEO_LENGTH || '' }}
           VIDEO_PRIVACY: ${{ inputs.privacy || vars.YOUTUBE_PRIVACY || 'public' }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
+          VIDEO_REVIEW: ${{ inputs.review }}
           VIDEO_TOPIC: ${{ inputs.topic }}
           VIDEO_REFERENCE: ${{ inputs.reference }}
           VIDEO_VOICE: ${{ inputs.voice || vars.VIDEO_VOICE || 'en-US-JennyNeural' }}
@@ -128,6 +134,7 @@ jobs:
           if [ -n "$VIDEO_LENGTH" ] && [ "$VIDEO_FORMAT" = "long" ]; then args+=(--length "$VIDEO_LENGTH"); fi
           if [ -n "$VIDEO_TOPIC" ]; then args+=(--topic "$VIDEO_TOPIC"); fi
           if [ -n "$VIDEO_REFERENCE" ]; then args+=(--reference "$VIDEO_REFERENCE"); fi
+          if [ "$VIDEO_REVIEW" = "true" ]; then args+=(--review); fi
           python -W ignore main.py "${args[@]}"
 
       - name: Telegram xabarnomasi
@@ -141,11 +148,21 @@ jobs:
           THUMB: ${{ steps.video.outputs.thumbnail }}
           COST: ${{ steps.video.outputs.cost }}
           QUEUED: ${{ steps.video.outputs.queued }}
+          REVIEW: ${{ steps.video.outputs.review }}
+          PREVIEW: ${{ steps.video.outputs.preview }}
+          RUN_ID: ${{ github.run_id }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then echo "Telegram sozlanmagan"; exit 0; fi
           api="https://api.telegram.org/bot$TG_TOKEN"
-          if [ "$OUTCOME" = "success" ] && [ "$QUEUED" = "1" ]; then
+          if [ "$OUTCOME" = "success" ] && [ "$REVIEW" = "1" ]; then
+            # Buyurtma: video + "Joyla / O'chir" tugmalari (bot callback'lari publish.yml ni ishga tushiradi)
+            caption=$(printf '👀 Video tayyor — ko'"'"'rib chiqing:\n\n%s' "$TITLE")
+            if [ -n "$COST" ] && [ "$COST" != "0.00" ]; then caption=$(printf '%s\n\n💰 ~$%s' "$caption" "$COST"); fi
+            markup=$(printf '{"inline_keyboard":[[{"text":"✅ YouTube'"'"'ga joyla","callback_data":"pub:%s"},{"text":"🗑 O'"'"'chir","callback_data":"del:%s"}]]}' "$RUN_ID" "$RUN_ID")
+            curl -s -o /dev/null -F chat_id="$TG_CHAT" -F video=@"$PREVIEW" -F supports_streaming=true \
+              -F caption="$caption" -F reply_markup="$markup" "$api/sendVideo"
+          elif [ "$OUTCOME" = "success" ] && [ "$QUEUED" = "1" ]; then
             text=$(printf '⏳ Video tayyor, lekin YouTube bugungi yuklash limiti tugadi.\n\n%s\n\nKeyingi ishga tushishda avtomatik yuklanadi.' "$TITLE")
             curl -s -o /dev/null -d chat_id="$TG_CHAT" --data-urlencode text="$text" "$api/sendMessage"
           elif [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
@@ -165,7 +182,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.video.outputs.queued == '1' && 'queued' || 'video' }}-${{ github.run_number }}
+          name: ${{ steps.video.outputs.review == '1' && 'review' || (steps.video.outputs.queued == '1' && 'queued' || 'video') }}-${{ github.run_number }}
           path: |
             output/*/final.mp4
             output/*/thumbnail.jpg

@@ -1,0 +1,43 @@
+# Har kuni 13:00 (Toshkent): serialning bugungi epizodini rejalashtiradi va Flow promptlarini Telegram'ga yuboradi.
+# 19:00 dagi uzun video aynan shu reja asosida yasaladi.
+name: Daily Flow prompts
+run-name: Bugungi epizod rejasi va Flow promptlari
+
+on:
+  schedule:
+    - cron: "0 8 * * *" # 08:00 UTC = 13:00 Toshkent
+  workflow_dispatch:
+
+permissions:
+  contents: write # episodes/ ni saqlash
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Python paketlari
+        run: pip install -q -r requirements.txt
+
+      - name: Epizod rejasi va Telegram
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -W ignore main.py --plan-today
+
+      - name: Epizodni saqlash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch -q origin main
+          git reset -q origin/main
+          git add episodes
+          git diff --cached --quiet || (git commit -m "Bugungi epizod rejasi [skip ci]" && git push origin HEAD:main)

@@ -36,6 +36,7 @@ type Scene = {
   quiz?: Quiz | null;
   puppets?: Puppet[];
   effect?: string | null;
+  clipVolume?: number; // foydalanuvchi klipining o'z ovozi (Flow effektlari); 0 = o'chiq
   image: string;
   video: string | null;
   videoDuration: number | null;
@@ -195,11 +196,12 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
         {aiClip ? (
           <OffthreadVideo src={staticFile(scene.video!)} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : scene.video && scene.videoDuration && !hasPuppets ? (
-          // Pixabay klipi: sahnadan qisqa bo'lsa takrorlanadi, o'z ovozi o'chirilgan
+          // Pixabay/Flow klipi: sahnadan qisqa bo'lsa takrorlanadi; Flow klipining ovoz effektlari saqlanadi
           <Loop durationInFrames={Math.max(1, Math.floor(scene.videoDuration * fps) - 1)}>
             <OffthreadVideo
               src={staticFile(scene.video)}
-              muted
+              muted={!scene.clipVolume}
+              volume={scene.clipVolume || 0}
               style={{ width: "100%", height: "100%", objectFit: "cover", transform: `scale(${1 + 0.05 * p})` }}
             />
           </Loop>

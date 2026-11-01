@@ -138,6 +138,9 @@ def main():
     ap.add_argument("--voice", help="edge-tts ovozi, masalan en-US-AnaNeural (bo'lmasa config.yaml dagisi)")
     ap.add_argument("--reference", help="yoqqan YouTube video havolasi — shu formatda original video yasaladi")
     ap.add_argument("--free", action="store_true", help="pullik rejimni o'chirish (faqat tekin xizmatlar)")
+    ap.add_argument("--plan-today", action="store_true",
+                    help="serialning bugungi epizodini rejalashtirish va Flow promptlarini Telegram'ga yuborish")
+    ap.add_argument("--serial", action="store_true", help="bugungi serial epizodidan video yasash (19:00)")
     ap.add_argument("--clips", help="botga yuborilgan kliplar (Telegram file_id, vergul bilan) — ulardan epizod")
     ap.add_argument("--review", action="store_true",
                     help="yuklamaslik: avval Telegram'da ko'rsatish (bot/panel buyurtmalari)")
@@ -147,6 +150,15 @@ def main():
     ap.add_argument("--style", choices=["auto", "stock", "ai"], default="auto",
                     help="stock = Pixabay video/rasm, ai = AI rasm, auto = config.yaml dagi tartib")
     args = ap.parse_args()
+    if args.plan_today or args.serial:
+        from pipeline import serial
+        from pipeline.script_writer import ScriptWriter
+        plan = serial.load_or_create(ScriptWriter(cfg), load_series())
+        print(f"  Bugungi epizod #{plan.get('number')}: {plan['title']}")
+        if args.plan_today:
+            serial.send_flow_prompts(plan)
+            return
+        args.type, args.topic = "cartoon", serial.topic_for(plan)
     if args.publish_dir:
         return publish_dir(Path(args.publish_dir), cfg, args.privacy)
     if args.upload_pending:
@@ -345,7 +357,9 @@ def main():
                 "video": clip if clip_dur else None, "video_duration": clip_dur,
                 "captions": tts.caption_chunks(scene["narration"], dur),
                 "puppets": puppets,
-                "effect": scene.get("effect") if puppets else None}
+                "effect": scene.get("effect") if puppets else None,
+                # Flow kliplari: o'z ovoz effektlari (olma tishlash va h.k.) saqlanadi
+                "clip_volume": vcfg.get("clip_sound_volume", 0.6) if scene.get("user_clip") else 0}
         if scene.get("quiz"):
             # Savol → taymer → javob: javob ovozi alohida, taymerdan keyin boshlanadi
             answer_audio = workdir / f"answer_{i:03d}.mp3"
@@ -418,12 +432,16 @@ def main():
             raise
         # YouTube kunlik limiti: video yo'qolmasin — artifact "queued-N" bo'lib saqlanadi va keyin yuklanadi
         print("  ⏳ YouTube kunlik limiti tugadi — video navbatga qo'yildi")
+        if args.serial:
+            serial.record(plan, "queued", script["title"])
         if gh_output:
             with open(gh_output, "a") as f:
                 f.write(f"queued=1\nthumbnail={thumb}\ncost={cost:.2f}\n")
                 f.write(f"title<<__EOT__\n{script['title']}\n__EOT__\n")
         return
     print(f"  Yuklandi: https://youtu.be/{vid}  (holat: {cfg['youtube']['privacy']})")
+    if args.serial:
+        serial.record(plan, f"https://youtu.be/{vid}", script["title"])
     if gh_output:  # keyingi qadam (Telegram xabarnomasi) uchun
         with open(gh_output, "a") as f:
             f.write(f"video_url=https://youtu.be/{vid}\nthumbnail={thumb}\ncost={cost:.2f}\n")

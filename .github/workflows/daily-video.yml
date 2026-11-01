@@ -141,6 +141,8 @@ jobs:
           if [ -n "$VIDEO_REFERENCE" ]; then args+=(--reference "$VIDEO_REFERENCE"); fi
           if [ "$VIDEO_REVIEW" = "true" ]; then args+=(--review); fi
           if [ -n "$VIDEO_CLIPS" ]; then args+=(--clips "$VIDEO_CLIPS"); fi
+          # 19:00 dagi uzun video — davomli serialning bugungi epizodi
+          if [ "$SCHEDULE_CRON" = "0 14 * * *" ]; then args+=(--serial); fi
           python -W ignore main.py "${args[@]}"
 
       - name: Telegram xabarnomasi
@@ -211,6 +213,7 @@ jobs:
           merged = remote + [t for t in local if t not in remote]
           json.dump(merged, open("topics_used.json", "w"), indent=2, ensure_ascii=False)
           EOF
-          git reset -q --soft origin/main
+          git reset -q origin/main  # faqat indeksni yangilaymiz — boshqa fayllar eski versiyaga qaytmasin
           git add topics_used.json
+          [ -d episodes ] && git add episodes
           git diff --cached --quiet || (git commit -m "Mavzular ro'yxati yangilandi [skip ci]" && git push origin HEAD:main)

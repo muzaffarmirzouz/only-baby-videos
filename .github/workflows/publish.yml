@@ -116,6 +116,6 @@ jobs:
           merged = remote + [t for t in local if t not in remote]
           json.dump(merged, open("topics_used.json", "w"), indent=2, ensure_ascii=False)
           EOF
-          git reset -q --soft origin/main
+          git reset -q origin/main  # faqat indeksni yangilaymiz — boshqa fayllar eski versiyaga qaytmasin
           git add topics_used.json
           git diff --cached --quiet || (git commit -m "Mavzular ro'yxati yangilandi [skip ci]" && git push origin HEAD:main)

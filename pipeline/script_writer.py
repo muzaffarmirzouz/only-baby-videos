@@ -89,6 +89,35 @@ Return JSON: {{"idea": one sentence, "theme": short, "setting": where it happens
         reference["analysis"] = json.loads(resp.choices[0].message.content)
         return reference["analysis"]
 
+    def plan_episode(self, series, past):
+        """Davomli serialning bugungi epizodi: oldingilarni davom ettiradi + Flow uchun 3-4 ta klip prompti."""
+        roster = "\n".join(f"- {c['name']}: {c['look']}. Personality: {c['personality']}. Skill: {c.get('skill', '')}"
+                           for c in series["characters"])
+        prev = "\n".join(f"Ep {e.get('number')}: {e['title']} — {e['summary']} (lesson: {e.get('lesson', '')})"
+                         for e in past) or "(this is the first episode of the season)"
+        data = self._ask(SAFETY_RULES, f"""You are the head writer of the kids animated series "{series['series']}".
+Characters:
+{roster}
+
+Previous episodes (most recent last):
+{prev}
+
+Write TODAY's episode ({datetime.now():%B %d}). It must continue the season naturally: characters remember what
+happened and what they learned before; reuse running jokes; sometimes refer back to a past episode.
+Each episode one character teaches the friends something new and useful for small kids — for example simple English
+words (colors, animals, greetings), counting, shapes, how to ride a toy car safely, brushing teeth, sharing, tidying up,
+being kind — mixed with a small problem, a rescue or help, and a happy ending. Do not repeat a previous lesson.
+Return JSON:
+{{"title": catchy episode title under 60 characters,
+  "summary": 2-3 sentences,
+  "lesson": the one thing kids learn,
+  "beats": 8-10 short story beats in order,
+  "flow_prompts": exactly 4 prompts for an image-to-video tool (each ~8 seconds) showing the 4 most visual moments.
+     Each prompt in English: start with "Use the saved characters <names> exactly as in their references."
+     then the place, the action step by step, camera (e.g. slow push-in), "Soft glossy 3D cartoon style, bright warm
+     colors.", and end with "Audio: natural sound effects only, no dialogue, no music."}}""")
+        return data
+
     def write_from_clips(self, frames, durations, topic=None, series=None, short=False):
         """Tayyor kliplar (Flow) uchun: har klip kadriga qarab unga mos ertakchi matnini yozadi."""
         import base64

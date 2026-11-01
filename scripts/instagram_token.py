@@ -20,14 +20,17 @@ def set_env(key, value):
 
 def main():
     env = dotenv_values(ROOT / ".env")
+    # System User tokeni (Business sozlamalari, "Никогда") almashtirishsiz ishlaydi;
+    # Graph API Explorer tokeni esa avval uzoq muddatliga almashtiriladi
+    token = env["META_SHORT_TOKEN"]
     long = requests.get(f"{GRAPH}/oauth/access_token", timeout=30, params={
         "grant_type": "fb_exchange_token", "client_id": env["META_APP_ID"],
-        "client_secret": env["META_APP_SECRET"], "fb_exchange_token": env["META_SHORT_TOKEN"]}).json()
-    if "access_token" not in long:
-        raise SystemExit(f"Token almashtirilmadi: {long.get('error', {}).get('message')}")
+        "client_secret": env["META_APP_SECRET"], "fb_exchange_token": token}).json()
+    if "access_token" in long:
+        token = long["access_token"]
     pages = requests.get(f"{GRAPH}/me/accounts", timeout=30, params={
         "fields": "name,access_token,instagram_business_account{id,username}",
-        "access_token": long["access_token"]}).json()
+        "access_token": token}).json()
     found = [p for p in pages.get("data", []) if p.get("instagram_business_account")]
     if not found:
         raise SystemExit("Instagram professional akkauntga ulangan Facebook sahifa topilmadi "

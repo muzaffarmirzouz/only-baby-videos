@@ -6,6 +6,7 @@ Video fayl to'g'ridan-to'g'ri yuklanadi (resumable upload) — ochiq havola kera
 import os
 import subprocess
 import time
+from pathlib import Path
 
 import requests
 
@@ -25,17 +26,39 @@ def _check(r):
     return data
 
 
+def _prepare(video_path):
+    """Instagram uchun ixcham nusxa: H.264 Main, ~5 Mbit/s, ovoz video uzunligida, faststart."""
+    out = Path(video_path).with_name("instagram_upload.mp4")
+    vdur = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration",
+                           "-of", "csv=p=0", str(video_path)], capture_output=True, text=True).stdout.strip()
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(video_path), "-c:v", "libx264", "-profile:v", "main",
+                    "-preset", "veryfast", "-crf", "22", "-maxrate", "5M", "-bufsize", "10M", "-pix_fmt", "yuv420p",
+                    "-r", "30", "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-t", vdur or "90",
+                    "-movflags", "+faststart", str(out)], check=True)
+    return out
+
+
+def _upload(token, ig, data, caption, tries=8):
+    """Instagram rupload ba'zan sababsiz rad etadi (ProcessingFailedError) — yangi konteyner bilan qayta urinamiz."""
+    last = ""
+    for attempt in range(tries):
+        c = _check(requests.post(f"{GRAPH}/{ig}/media", timeout=60, data={
+            "media_type": "REELS", "upload_type": "resumable", "caption": caption[:2200],
+            "share_to_feed": "true", "access_token": token}))
+        up = requests.post(c.get("uri") or f"{RUPLOAD}/{c['id']}", data=data, timeout=600, headers={
+            "Authorization": f"OAuth {token}", "offset": "0", "file_size": str(len(data))})
+        if up.ok and up.json().get("success"):
+            return c["id"]
+        last = up.text[:200]
+        time.sleep(5 + attempt * 5)
+    raise RuntimeError(f"Instagram: video {tries} urinishda ham yuklanmadi ({last})")
+
+
 def publish_reel(video_path, caption):
     """Reel joylaydi va havolasini qaytaradi."""
     token, ig = os.environ["INSTAGRAM_TOKEN"], os.environ["INSTAGRAM_USER_ID"]
-    container = _check(requests.post(f"{GRAPH}/{ig}/media", timeout=60, data={
-        "media_type": "REELS", "upload_type": "resumable", "caption": caption[:2200],
-        "share_to_feed": "true", "access_token": token}))["id"]
-    data = open(video_path, "rb").read()
-    up = requests.post(f"{RUPLOAD}/{container}", data=data, timeout=600, headers={
-        "Authorization": f"OAuth {token}", "offset": "0", "file_size": str(len(data))})
-    if not up.ok or not up.json().get("success"):
-        raise RuntimeError(f"Instagram: video yuklanmadi ({up.text[:200]})")
+    data = _prepare(video_path).read_bytes()
+    container = _upload(token, ig, data, caption)
     for _ in range(30):  # Instagram videoni qayta ishlaydi (odatda 1-3 daqiqa)
         status = _check(requests.get(f"{GRAPH}/{container}", timeout=60,
                                      params={"fields": "status_code,status", "access_token": token}))

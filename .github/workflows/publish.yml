@@ -82,7 +82,7 @@ jobs:
           done
 
       - name: Telegram xabarnomasi
-        if: always()
+        if: ${{ !cancelled() }} # qo'lda to'xtatilgan ish uchun "xato" xabari yuborilmaydi
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}

@@ -345,7 +345,9 @@ def main():
                 "video": clip if clip_dur else None, "video_duration": clip_dur,
                 "captions": tts.caption_chunks(scene["narration"], dur),
                 "puppets": puppets,
-                "effect": scene.get("effect") if puppets else None}
+                "effect": scene.get("effect") if puppets else None,
+                # Flow kliplari: o'z ovoz effektlari (olma tishlash va h.k.) saqlanadi
+                "clip_volume": vcfg.get("clip_sound_volume", 0.6) if scene.get("user_clip") else 0}
         if scene.get("quiz"):
             # Savol → taymer → javob: javob ovozi alohida, taymerdan keyin boshlanadi
             answer_audio = workdir / f"answer_{i:03d}.mp3"

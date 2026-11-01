@@ -31,9 +31,23 @@ def download(file_ids, workdir):
         r = requests.get(f"{API}/file/bot{token}/{meta['result']['file_path']}", timeout=300)
         r.raise_for_status()
         clip.write_bytes(r.content)
+        _normalize_audio(clip)
         dur, w, h = _probe(clip)
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{dur / 2:.2f}", "-i", str(clip),
                         "-frames:v", "1", "-q:v", "2", str(workdir / f"img_{i:03d}.jpg")], check=True)
         print(f"  Klip #{i + 1}: {dur:.1f} s, {w}x{h}")
         infos.append((dur, w, h))
     return infos
+
+
+def _normalize_audio(clip, target=-20):
+    """Flow kliplarining effektlari ko'pincha juda past yozilgan — ovozni bir xil darajaga ko'taramiz (video o'zgarmaydi)."""
+    has_audio = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=codec_name",
+                                "-of", "csv=p=0", str(clip)], capture_output=True, text=True).stdout.strip()
+    if not has_audio:
+        return
+    tmp = clip.with_suffix(".norm.mp4")
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(clip), "-c:v", "copy",
+                    "-af", f"loudnorm=I={target}:TP=-2:LRA=11", "-c:a", "aac", "-b:a", "160k", "-ar", "48000", str(tmp)],
+                   check=True)
+    tmp.replace(clip)

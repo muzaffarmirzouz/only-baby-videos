@@ -9,6 +9,7 @@ Misollar:
 import argparse
 import json
 import os
+import subprocess
 import random
 import re
 from datetime import datetime
@@ -327,6 +328,10 @@ def main():
         audio = workdir / f"voice_{i:03d}.mp3"
         img = workdir / f"img_{i:03d}.jpg"
         clip = workdir / f"clip_{i:03d}.mp4"
+        if scene.get("user_clip") and not vcfg.get("clip_narration", False) and not audio.exists():
+            # Flow klipi o'z ovozi bilan: ertakchi o'rniga klip uzunligidagi jimjitlik
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+                            "-t", f"{tts.audio_duration(clip):.2f}", "-q:a", "9", str(audio)], check=True)
         if audio.exists():
             dur = tts.audio_duration(audio)
         else:

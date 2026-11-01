@@ -143,7 +143,8 @@ Return JSON: {{"topic": short topic, "title": catchy YouTube title under {60 if 
         out["scenes"] = [{"narration": sc["narration"], "image_prompt": "", "user_clip": True}
                          for sc in out["scenes"][:len(frames)]]
         self._moderate(out["scenes"])
-        out.update({"type": "cartoon", "format": "short" if short else "long", "minutes": round(sum(durations) / 60, 2)})
+        out.update({"type": "cartoon", "format": "short" if short else "long", "minutes": round(sum(durations) / 60, 2),
+                    "clip_mode": True})  # kliplar ketma-ket: sarlavhasiz, o'tishlarsiz
         if series:
             out["series"] = series["series"]
             if series["series"].lower() not in out["title"].lower() and len(out["title"]) + len(series["series"]) < 85:

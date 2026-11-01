@@ -50,6 +50,7 @@ export type Props = {
   kind: string;
   vertical: boolean; // Shorts: 1080x1920
   showCaptions?: boolean; // ekrandagi subtitrlar (standart: yo'q)
+  clipMode?: boolean; // Flow kliplari: sarlavhasiz, pauzasiz, o'tishlarsiz — kliplar ketma-ket
   music: string | null;
   musicVolume: number;
   scenes: Scene[];
@@ -60,10 +61,13 @@ const introFrames = (vertical: boolean) => (vertical ? 45 : 90); // Shorts'da in
 const PAUSE_SECONDS = 0.5;
 const COLORS = ["#ff5fa2", "#ffb800", "#38c9ff", "#7bdc4f", "#a970ff"];
 
-const sceneFrames = (s: Scene) => Math.ceil((s.duration + PAUSE_SECONDS) * FPS);
+const sceneFrames = (s: Scene, clipMode = false) => Math.ceil((s.duration + (clipMode ? 0 : PAUSE_SECONDS)) * FPS);
 
 const calculateMetadata: CalculateMetadataFunction<Props> = ({ props }) => {
-  const total = props.scenes.reduce((sum, s) => sum + sceneFrames(s), introFrames(props.vertical));
+  const total = props.scenes.reduce(
+    (sum, s) => sum + sceneFrames(s, props.clipMode),
+    props.clipMode ? 0 : introFrames(props.vertical),
+  );
   return {
     durationInFrames: Math.max(total, 1),
     width: props.vertical ? 1080 : 1920,
@@ -88,22 +92,33 @@ export const MyComposition = () => {
   );
 };
 
-export const KidsVideo: React.FC<Props> = ({ title, kind, vertical, showCaptions, music, musicVolume, scenes: allScenes }) => {
+export const KidsVideo: React.FC<Props> = ({
+  title,
+  kind,
+  vertical,
+  showCaptions,
+  clipMode,
+  music,
+  musicVolume,
+  scenes: allScenes,
+}) => {
   // Subtitrsiz rejim: kichik bolalar o'qiy olmaydi, matn esa rasmni to'sadi
   const scenes = showCaptions ? allScenes : allScenes.map((s) => ({ ...s, captions: [] }));
   return (
     <AbsoluteFill style={{ backgroundColor: "#fff4d6" }}>
       {music ? <Audio src={staticFile(music)} volume={musicVolume} loop /> : null}
       <Series>
-        <Series.Sequence durationInFrames={introFrames(vertical)}>
-          <Intro title={title.replace(/\s*#shorts/i, "")} image={scenes[0]?.image} vertical={vertical} />
-        </Series.Sequence>
+        {clipMode ? null : (
+          <Series.Sequence durationInFrames={introFrames(vertical)}>
+            <Intro title={title.replace(/\s*#shorts/i, "")} image={scenes[0]?.image} vertical={vertical} />
+          </Series.Sequence>
+        )}
         {scenes.map((s, i) => (
-          <Series.Sequence key={i} durationInFrames={sceneFrames(s)}>
+          <Series.Sequence key={i} durationInFrames={sceneFrames(s, clipMode)}>
             {s.quiz ? (
               <QuizScene scene={s} quiz={s.quiz} vertical={vertical} />
             ) : (
-              <SceneView scene={s} index={i} cartoon={kind === "cartoon"} vertical={vertical} />
+              <SceneView scene={s} index={i} cartoon={kind === "cartoon"} vertical={vertical} clipMode={clipMode} />
             )}
           </Series.Sequence>
         ))}
@@ -152,7 +167,12 @@ const Intro: React.FC<{ title: string; image?: string; vertical: boolean }> = ({
   );
 };
 
-const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; vertical: boolean }> = ({ scene, cartoon, vertical }) => {
+const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; vertical: boolean; clipMode?: boolean }> = ({
+  scene,
+  cartoon,
+  vertical,
+  clipMode,
+}) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width, height } = useVideoConfig();
   const p = frame / durationInFrames;
@@ -171,10 +191,11 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
     { scale: 1.15, x: 6 - 12 * p },
   ];
   const m = motions[scene.motion % motions.length];
-  const opacity = interpolate(frame, [0, 10, durationInFrames - 10, durationInFrames], [0, 1, 1, 0], {
+  const fade = interpolate(frame, [0, 10, durationInFrames - 10, durationInFrames], [0, 1, 1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const opacity = clipMode ? 1 : fade; // Flow kliplari to'g'ridan-to'g'ri ulanadi
 
   const t = frame / fps;
   const caption = scene.captions.find((c) => t >= c.start && t < c.end);
@@ -202,7 +223,7 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
               src={staticFile(scene.video)}
               muted={!scene.clipVolume}
               volume={scene.clipVolume || 0}
-              style={{ width: "100%", height: "100%", objectFit: "cover", transform: `scale(${1 + 0.05 * p})` }}
+              style={{ width: "100%", height: "100%", objectFit: "cover", transform: clipMode ? undefined : `scale(${1 + 0.05 * p})` }}
             />
           </Loop>
         ) : (

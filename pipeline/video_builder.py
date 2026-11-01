@@ -42,6 +42,7 @@ def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, con
         "title": script["title"],
         "kind": script.get("type", "story"),
         "showCaptions": captions,
+        "clipMode": bool(script.get("clip_mode")),
         "vertical": script.get("format") == "short",
         "music": publish(music) if music else None,
         "musicVolume": music_volume,

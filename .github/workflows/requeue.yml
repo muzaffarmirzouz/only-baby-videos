@@ -1,0 +1,30 @@
+# Eski run'ning tayyor videosini (artifact) yuklash navbatiga qo'yish — limit ochilganda avtomatik yuklanadi.
+name: Requeue video
+run-name: "Navbatga qo'yish (run ${{ inputs.run_id }})"
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Video yasalgan run ID"
+        required: true
+
+permissions:
+  actions: read
+
+jobs:
+  requeue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Artifact'ni olish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "${{ inputs.run_id }}" -R "$GITHUB_REPOSITORY" -D video
+
+      - name: Navbatga qo'yish
+        uses: actions/upload-artifact@v4
+        with:
+          name: queued-requeue-${{ github.run_number }}
+          path: video
+          retention-days: 7

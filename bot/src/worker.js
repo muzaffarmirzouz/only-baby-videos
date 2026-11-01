@@ -74,6 +74,7 @@ async function createVideo(env, o) {
     voice: VOICES.includes(o.voice) ? o.voice : VOICES[0],
     privacy: PRIVACY.includes(o.privacy) ? o.privacy : "public",
     review: "true", // buyurtmalar avval Telegram'da ko'rsatiladi, "Joyla" bosilganda yuklanadi
+    clips: String(o.clips || "").replace(/[^A-Za-z0-9_\-,]/g, ""), // Flow kliplari (Telegram file_id)
   };
   await github(env, `/actions/workflows/${WORKFLOW}/dispatches`, {
     method: "POST",
@@ -145,6 +146,15 @@ async function handleUpdate(update, env, origin) {
     if (!allowed) {
       return tg(env, "sendMessage", { chat_id, text: "Bu shaxsiy bot. Kechirasiz 🙏" });
     }
+    // Flow (yoki boshqa) kliplar: /epizod buyrug'igacha yig'iladi
+    const media = update.message.video ||
+      (update.message.document?.mime_type?.startsWith("video/") ? update.message.document : null);
+    if (media) return receiveClip(env, chat_id, media);
+    if (text.startsWith("/epizod")) return makeEpisode(env, chat_id, text.slice(7).trim());
+    if (text === "/bekor") {
+      await env.CLIPS.delete(`clips:${chat_id}`);
+      return tg(env, "sendMessage", { chat_id, text: "🗑 Yuborilgan kliplar tozalandi." });
+    }
     if (text === "/start" || text === "/help") {
       return tg(env, "sendMessage", {
         chat_id,
@@ -152,6 +162,7 @@ async function handleUpdate(update, env, origin) {
           "👋 Only Baby Studio\n\n" +
           "• Mavzuni shunchaki yozing — video yasayman\n" +
           "• YouTube havolasini yuboring — g'oyasi asosida bizning qahramonlar bilan video\n" +
+          "• Flow kliplarini yuboring, keyin /epizod [prompt] — ulardan epizod yasayman\n" +
           "   (istak qo'shsa bo'ladi: havola + \"mashinachalar qo'sh\")\n" +
           "• /new — yangi video (AI mavzu tanlaydi)\n" +
           "• /status — oxirgi videolar holati\n" +
@@ -230,6 +241,49 @@ async function handleUpdate(update, env, origin) {
     }
   }
   return tg(env, "answerCallbackQuery", { callback_query_id: cq.id });
+}
+
+const MAX_CLIP_MB = 20; // Telegram bot 20 MB dan katta faylni yuklab ololmaydi
+
+async function receiveClip(env, chat_id, media) {
+  if (media.file_size && media.file_size > MAX_CLIP_MB * 1024 * 1024) {
+    return tg(env, "sendMessage", {
+      chat_id,
+      text: `⚠️ Klip juda katta (${Math.round(media.file_size / 1048576)} MB). Telegram bot ${MAX_CLIP_MB} MB gacha qabul qiladi — Flow'da 720p qilib yuklab oling.`,
+    });
+  }
+  const key = `clips:${chat_id}`;
+  const list = JSON.parse((await env.CLIPS.get(key)) || "[]");
+  list.push({ id: media.file_id, w: media.width || 0, h: media.height || 0, d: media.duration || 0 });
+  await env.CLIPS.put(key, JSON.stringify(list), { expirationTtl: 86400 * 3 });
+  return tg(env, "sendMessage", {
+    chat_id,
+    text: `🎞 Klip #${list.length} qabul qilindi${media.duration ? ` (${media.duration} s)` : ""}.\n\nYana yuboring yoki /epizod yozing (yoniga prompt qo'shsa bo'ladi). /bekor — tozalash.`,
+  });
+}
+
+async function makeEpisode(env, chat_id, prompt) {
+  const key = `clips:${chat_id}`;
+  const list = JSON.parse((await env.CLIPS.get(key)) || "[]");
+  if (!list.length) {
+    return tg(env, "sendMessage", { chat_id, text: "Avval Flow kliplarini yuboring, keyin /epizod yozing." });
+  }
+  const vertical = list.some((c) => c.h > c.w);
+  try {
+    await createVideo(env, {
+      clips: list.map((c) => c.id).join(","),
+      topic: prompt,
+      type: "cartoon",
+      format: vertical ? "short" : "long",
+    });
+  } catch (e) {
+    return tg(env, "sendMessage", { chat_id, text: `❌ Xato: ${e.message}` });
+  }
+  await env.CLIPS.delete(key);
+  return tg(env, "sendMessage", {
+    chat_id,
+    text: `✅ ${list.length} ta klipdan ${vertical ? "Shorts" : "video"} yasalmoqda: ovoz, musiqa va ulash.\nTayyor bo'lganda shu yerga yuboraman — ko'rib, "Joyla" deysiz.`,
+  });
 }
 
 async function handleReview(env, cq, action, runId) {

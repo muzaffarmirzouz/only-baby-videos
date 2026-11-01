@@ -39,7 +39,7 @@ curl -s -o /dev/null "$API/setWebhook" -d url="$URL/tg" -d secret_token="$WEBHOO
 curl -s -o /dev/null "$API/setChatMenuButton" -H 'Content-Type: application/json' \
   -d "{\"menu_button\":{\"type\":\"web_app\",\"text\":\"Studio\",\"web_app\":{\"url\":\"$URL/app\"}}}"
 curl -s -o /dev/null "$API/setMyCommands" -H 'Content-Type: application/json' \
-  -d '{"commands":[{"command":"new","description":"Yangi video"},{"command":"status","description":"Videolar holati"},{"command":"help","description":"Yordam"}]}'
+  -d '{"commands":[{"command":"new","description":"Yangi video"},{"command":"epizod","description":"Yuborilgan kliplardan epizod"},{"command":"bekor","description":"Kliplarni tozalash"},{"command":"status","description":"Videolar holati"},{"command":"help","description":"Yordam"}]}'
 
 echo "4/4 GitHub xabarnoma kalitlari..."
 printf '%s' "$TG_TOKEN" | gh secret set TELEGRAM_BOT_TOKEN >/dev/null

@@ -89,6 +89,40 @@ Return JSON: {{"idea": one sentence, "theme": short, "setting": where it happens
         reference["analysis"] = json.loads(resp.choices[0].message.content)
         return reference["analysis"]
 
+    def write_from_clips(self, frames, durations, topic=None, series=None, short=False):
+        """Tayyor kliplar (Flow) uchun: har klip kadriga qarab unga mos ertakchi matnini yozadi."""
+        import base64
+        roster = ""
+        if series:
+            roster = "Our characters: " + "; ".join(f"{c['name']} ({c['look']})" for c in series["characters"])
+        words = [max(6, round(d * 2.0)) for d in durations]  # bolalar uchun ~2 so'z/soniya
+        content = [{"type": "text", "text": f"""These are {len(frames)} consecutive clips of one episode of a kids animated show
+{f'"{series["series"]}"' if series else ""}. {roster}
+Creator's idea: {topic or "(not given — tell the story you see)"}.
+Write a warm storyteller narration that matches what happens in each clip, in simple English for kids aged 3-8.
+Narration for clip k must be about {words} words (clip k takes that long), so it fits the clip.
+Return JSON: {{"topic": short topic, "title": catchy YouTube title under {60 if short else 70} characters,
+  "description": 2-3 short kid and parent friendly sentences, "tags": 10-15 tags,
+  "scenes": [{{"narration": "..."}} for each clip in order]}}"""}]
+        for f in frames:
+            content.append({"type": "image_url", "image_url": {
+                "url": "data:image/jpeg;base64," + base64.b64encode(open(f, "rb").read()).decode()}})
+        resp = self.client.chat.completions.create(
+            model=self.model, temperature=0.7, response_format={"type": "json_object"},
+            messages=[{"role": "system", "content": SAFETY_RULES}, {"role": "user", "content": content}])
+        out = json.loads(resp.choices[0].message.content)
+        out["scenes"] = [{"narration": sc["narration"], "image_prompt": "", "user_clip": True}
+                         for sc in out["scenes"][:len(frames)]]
+        self._moderate(out["scenes"])
+        out.update({"type": "cartoon", "format": "short" if short else "long", "minutes": round(sum(durations) / 60, 2)})
+        if series:
+            out["series"] = series["series"]
+            if series["series"].lower() not in out["title"].lower() and len(out["title"]) + len(series["series"]) < 85:
+                out["title"] = f"{out['title']} | {series['series']}"
+        if short and "#shorts" not in out["title"].lower():
+            out["title"] = f"{out['title'][:90]} #Shorts"
+        return out
+
     def pick_type(self, reference):
         """Namuna video uchun eng mos turni tanlaydi."""
         data = self._ask(

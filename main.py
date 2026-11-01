@@ -138,6 +138,7 @@ def main():
     ap.add_argument("--voice", help="edge-tts ovozi, masalan en-US-AnaNeural (bo'lmasa config.yaml dagisi)")
     ap.add_argument("--reference", help="yoqqan YouTube video havolasi — shu formatda original video yasaladi")
     ap.add_argument("--free", action="store_true", help="pullik rejimni o'chirish (faqat tekin xizmatlar)")
+    ap.add_argument("--clips", help="botga yuborilgan kliplar (Telegram file_id, vergul bilan) — ulardan epizod")
     ap.add_argument("--review", action="store_true",
                     help="yuklamaslik: avval Telegram'da ko'rsatish (bot/panel buyurtmalari)")
     ap.add_argument("--publish-dir", help="tasdiqlangan tayyor video papkasini (final.mp4 + script.json) yuklash")
@@ -163,7 +164,18 @@ def main():
         cfg["voice"] = args.voice
 
     # 1. Ssenariy
-    if args.from_script:
+    if args.clips:
+        # Tayyor kliplar (Flow): animatsiya kliplardan, ovoz/musiqa/ulash bizdan
+        from pipeline import clips as clips_mod
+        from pipeline.script_writer import ScriptWriter
+        workdir = ROOT / "output" / f"{datetime.now():%Y%m%d-%H%M}-clips"
+        workdir.mkdir(parents=True, exist_ok=True)
+        print("[1/5] Kliplar yuklab olinmoqda...")
+        infos = clips_mod.download(args.clips.split(","), workdir)
+        short = infos[0][2] > infos[0][1]
+        script = ScriptWriter(cfg).write_from_clips([workdir / f"img_{i:03d}.jpg" for i in range(len(infos))],
+                                                    [d for d, _, _ in infos], args.topic, load_series(), short)
+    elif args.from_script:
         script = json.loads(Path(args.from_script).read_text())
     else:
         from pipeline.script_writer import ScriptWriter
@@ -188,7 +200,7 @@ def main():
 
     if args.from_script:
         workdir = Path(args.from_script).resolve().parent  # qayta ishga tushirishda tayyor fayllar qayta ishlatiladi
-    else:
+    elif not args.clips:
         workdir = ROOT / "output" / f"{datetime.now():%Y%m%d-%H%M}-{slug(script['title'])}"
     workdir.mkdir(parents=True, exist_ok=True)
     (workdir / "script.json").write_text(json.dumps(script, indent=2, ensure_ascii=False))
@@ -327,6 +339,8 @@ def main():
                 clip_dur = fetch_media(scene, i, img, clip)
         else:
             clip_dur = fetch_media(scene, i, img, clip)
+        if scene.get("user_clip") and clip_dur:
+            dur = max(dur, clip_dur - 0.3)  # foydalanuvchi klipi to'liq ko'rinsin
         item = {"image": img, "audio": audio, "duration": dur,
                 "video": clip if clip_dur else None, "video_duration": clip_dur,
                 "captions": tts.caption_chunks(scene["narration"], dur),

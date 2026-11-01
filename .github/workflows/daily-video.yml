@@ -1,7 +1,7 @@
 # Har kuni 1 ta uzun video va 3 ta Shorts yaratib, YouTube kanalga yuklaydi.
 # Qo'lda ishga tushirish: GitHub → Actions → "Daily kids video" → Run workflow
 name: Daily kids video
-run-name: ${{ github.event_name == 'schedule' && (github.event.schedule == '0 14 * * *' && 'Kunlik uzun video (avto)' || 'Kunlik Shorts (avto)') || format('{0} · {1} · {2}', inputs.format == 'short' && 'Shorts' || format('{0} daq', inputs.length || '3'), inputs.type, (inputs.topic && 'prompt bilan') || (inputs.reference && 'namuna asosida') || 'AI mavzu tanlaydi') }}
+run-name: ${{ github.event_name == 'schedule' && (github.event.schedule == '0 14 * * *' && 'Kunlik uzun video (avto)' || 'Kunlik Shorts (avto)') || format('{0} · {1} · {2}', inputs.format == 'short' && 'Shorts' || format('{0} daq', inputs.length || '3'), inputs.type, (inputs.clips && 'Flow kliplaridan') || (inputs.topic && 'prompt bilan') || (inputs.reference && 'namuna asosida') || 'AI mavzu tanlaydi') }}
 
 on:
   schedule:
@@ -45,6 +45,9 @@ on:
         type: choice
         options: [auto, stock, ai]
         default: auto
+      clips:
+        description: "Botga yuborilgan kliplar (Telegram file_id, vergul bilan) — ulardan epizod"
+        default: ""
       review:
         description: "Avval Telegram'da ko'rsatish (yuklash faqat tasdiqlangandan keyin)"
         type: choice
@@ -125,6 +128,8 @@ jobs:
           VIDEO_PRIVACY: ${{ inputs.privacy || vars.YOUTUBE_PRIVACY || 'public' }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
           VIDEO_REVIEW: ${{ inputs.review }}
+          VIDEO_CLIPS: ${{ inputs.clips }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           VIDEO_TOPIC: ${{ inputs.topic }}
           VIDEO_REFERENCE: ${{ inputs.reference }}
           VIDEO_VOICE: ${{ inputs.voice || vars.VIDEO_VOICE || 'en-US-JennyNeural' }}
@@ -135,6 +140,7 @@ jobs:
           if [ -n "$VIDEO_TOPIC" ]; then args+=(--topic "$VIDEO_TOPIC"); fi
           if [ -n "$VIDEO_REFERENCE" ]; then args+=(--reference "$VIDEO_REFERENCE"); fi
           if [ "$VIDEO_REVIEW" = "true" ]; then args+=(--review); fi
+          if [ -n "$VIDEO_CLIPS" ]; then args+=(--clips "$VIDEO_CLIPS"); fi
           python -W ignore main.py "${args[@]}"
 
       - name: Telegram xabarnomasi

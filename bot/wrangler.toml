@@ -14,3 +14,8 @@ fallthrough = true
 
 # Maxfiy kalitlar (wrangler secret put bilan qo'yiladi, bu yerda yozilmaydi):
 #   TELEGRAM_BOT_TOKEN, GITHUB_TOKEN, WEBHOOK_SECRET
+
+# Botga yuborilgan Flow kliplari (/epizod buyrug'igacha saqlanadi)
+[[kv_namespaces]]
+binding = "CLIPS"
+id = "0abf230121664b56b2ef55fc6e61fdc0"

@@ -103,13 +103,15 @@ def publish_dir(d, cfg, privacy=None):
             raise SystemExit(3)
         raise
     print(f"  Yuklandi: https://youtu.be/{vid}")
+    from pipeline import instagram
+    ig_url = instagram.share(d / "final.mp4", script, f"https://youtu.be/{vid}", d)
     topics = load_topics()
     topics.append(script.get("topic", script["title"]))
     TOPICS_FILE.write_text(json.dumps(topics, indent=2, ensure_ascii=False))
     gh_output = os.getenv("GITHUB_OUTPUT")
     if gh_output:
         with open(gh_output, "a") as f:
-            f.write(f"video_url=https://youtu.be/{vid}\n")
+            f.write(f"video_url=https://youtu.be/{vid}\nig_url={ig_url or ''}\n")
             f.write(f"title<<__EOT__\n{script['title']}\n__EOT__\n")
 
 
@@ -166,8 +168,8 @@ def main():
         from pipeline import pending
         from pipeline.uploader import upload
         cfg["youtube"]["privacy"] = args.privacy or cfg["youtube"]["privacy"]
-        for title, url in pending.upload_all(cfg["youtube"], upload):
-            pending.notify(f"✅ Navbatdagi video yuklandi!\n\n{title}\n{url}")
+        for title, url, ig_url in pending.upload_all(cfg["youtube"], upload):
+            pending.notify(f"✅ Navbatdagi video yuklandi!\n\n{title}\n{url}" + (f"\n📸 Instagram: {ig_url}" if ig_url else ""))
         return
     if args.length is None:
         args.length = 0.75 if args.format == "short" else 3
@@ -445,11 +447,13 @@ def main():
                 f.write(f"title<<__EOT__\n{script['title']}\n__EOT__\n")
         return
     print(f"  Yuklandi: https://youtu.be/{vid}  (holat: {cfg['youtube']['privacy']})")
+    from pipeline import instagram
+    ig_url = instagram.share(final, script, f"https://youtu.be/{vid}", workdir)
     if args.serial:
         serial.record(plan, f"https://youtu.be/{vid}", script["title"])
     if gh_output:  # keyingi qadam (Telegram xabarnomasi) uchun
         with open(gh_output, "a") as f:
-            f.write(f"video_url=https://youtu.be/{vid}\nthumbnail={thumb}\ncost={cost:.2f}\n")
+            f.write(f"video_url=https://youtu.be/{vid}\nthumbnail={thumb}\ncost={cost:.2f}\nig_url={ig_url or ''}\n")
             f.write(f"title<<__EOT__\n{script['title']}\n__EOT__\n")
     summary = os.getenv("GITHUB_STEP_SUMMARY")
     if summary:

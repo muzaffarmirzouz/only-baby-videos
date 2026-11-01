@@ -4,7 +4,7 @@
 set -e
 cd "$(dirname "$0")/.."
 
-for name in OPENAI_API_KEY PIXABAY_API_KEY POLLINATIONS_KEY GEMINI_API_KEY; do
+for name in OPENAI_API_KEY PIXABAY_API_KEY POLLINATIONS_KEY GEMINI_API_KEY INSTAGRAM_TOKEN INSTAGRAM_USER_ID; do
   value=$(grep "^$name=" .env | cut -d= -f2- | tr -d '\n')
   if [ -n "$value" ]; then
     printf '%s' "$value" | gh secret set "$name" >/dev/null

@@ -35,7 +35,7 @@ def queued():
 
 
 def upload_all(yt_cfg, upload_fn):
-    """Navbatdagi videolarni yuklaydi; limit yana tugasa to'xtaydi. Yuklanganlar [(title, url)]."""
+    """Navbatdagi videolarni yuklaydi (+ Instagram); limit yana tugasa to'xtaydi. [(title, url, ig_url)]."""
     done = []
     for art in queued():
         with tempfile.TemporaryDirectory() as tmp:
@@ -55,7 +55,9 @@ def upload_all(yt_cfg, upload_fn):
                         return done
                     raise
                 print(f"  Navbatdan yuklandi: {script['title']} → https://youtu.be/{vid}")
-                done.append((script["title"], f"https://youtu.be/{vid}"))
+                from pipeline import instagram
+                ig_url = instagram.share(video, script, f"https://youtu.be/{vid}", video.parent)
+                done.append((script["title"], f"https://youtu.be/{vid}", ig_url))
         _api(f"actions/artifacts/{art['id']}", "-X", "DELETE")
     return done
 

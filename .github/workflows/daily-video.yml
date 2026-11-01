@@ -109,6 +109,8 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_USER_ID: ${{ secrets.INSTAGRAM_USER_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           VIDEO_PRIVACY: ${{ inputs.privacy || vars.YOUTUBE_PRIVACY || 'public' }}
@@ -118,6 +120,8 @@ jobs:
         id: video
         env:
           GH_TOKEN: ${{ github.token }}
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_USER_ID: ${{ secrets.INSTAGRAM_USER_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           POLLINATIONS_KEY: ${{ secrets.POLLINATIONS_KEY }}
@@ -153,6 +157,7 @@ jobs:
           OUTCOME: ${{ steps.video.outcome }}
           TITLE: ${{ steps.video.outputs.title }}
           VIDEO_URL: ${{ steps.video.outputs.video_url }}
+          IG_URL: ${{ steps.video.outputs.ig_url }}
           THUMB: ${{ steps.video.outputs.thumbnail }}
           COST: ${{ steps.video.outputs.cost }}
           QUEUED: ${{ steps.video.outputs.queued }}
@@ -175,6 +180,7 @@ jobs:
             curl -s -o /dev/null -d chat_id="$TG_CHAT" --data-urlencode text="$text" "$api/sendMessage"
           elif [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
             caption=$(printf '✅ Yangi video yuklandi!\n\n%s\n%s' "$TITLE" "$VIDEO_URL")
+            if [ -n "$IG_URL" ]; then caption=$(printf '%s\n📸 Instagram: %s' "$caption" "$IG_URL"); fi
             if [ -n "$COST" ] && [ "$COST" != "0.00" ]; then caption=$(printf '%s\n\n💰 Rasm va ovoz: ~$%s' "$caption" "$COST"); fi
             if [ -f "$THUMB" ]; then
               curl -s -o /dev/null -F chat_id="$TG_CHAT" -F photo=@"$THUMB" -F caption="$caption" "$api/sendPhoto"

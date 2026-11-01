@@ -55,6 +55,8 @@ jobs:
       - name: YouTube'ga yuklash
         id: pub
         env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_USER_ID: ${{ secrets.INSTAGRAM_USER_ID }}
           VIDEO_PRIVACY: ${{ inputs.privacy }}
         run: |
           set +e
@@ -90,6 +92,7 @@ jobs:
           LIMIT: ${{ steps.pub.outputs.limit }}
           TITLE: ${{ steps.pub.outputs.title }}
           VIDEO_URL: ${{ steps.pub.outputs.video_url }}
+          IG_URL: ${{ steps.pub.outputs.ig_url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then exit 0; fi
@@ -97,6 +100,7 @@ jobs:
             text="⏳ YouTube bugungi yuklash limiti tugadi — video navbatga qo'yildi va keyingi ishga tushishda avtomatik yuklanadi."
           elif [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
             text=$(printf '✅ Kanalga joylandi!\n\n%s\n%s' "$TITLE" "$VIDEO_URL")
+            if [ -n "$IG_URL" ]; then text=$(printf '%s\n📸 Instagram: %s' "$text" "$IG_URL"); fi
           else
             text=$(printf '❌ Joylashda xato bo'"'"'ldi.\n\nLog: %s' "$RUN_URL")
           fi

@@ -13,6 +13,7 @@ const VOICES = [
   "en-GB-SoniaNeural", "en-US-GuyNeural", "en-US-AndrewNeural",
 ];
 const NO_TOPIC = "AI o'zi tanlaydi";
+const MAX_TOPIC = 2000; // prompt uzunligi (Telegram xabari 4096 belgigacha)
 
 export default {
   async fetch(req, env) {
@@ -64,7 +65,7 @@ async function github(env, path, init = {}) {
 
 async function createVideo(env, o) {
   const inputs = {
-    topic: String(o.topic || "").trim().slice(0, 200),
+    topic: String(o.topic || "").replace(/\s+/g, " ").trim().slice(0, MAX_TOPIC),
     reference: YT_RE.test(String(o.reference || "")) ? String(o.reference).match(YT_RE)[0] : "",
     type: TYPES[o.type] ? o.type : "auto",
     format: o.format === "short" ? "short" : "long",
@@ -171,7 +172,7 @@ async function handleUpdate(update, env, origin) {
     const link = text.match(YT_RE);
     if (link) {
       // Havoladan tashqari yozilgan matn — istak (masalan "mashinachalar qo'sh")
-      const wish = text.replace(link[0], "").replace(/^\/new/, "").trim().slice(0, 200);
+      const wish = text.replace(link[0], "").replace(/^\/new/, "").replace(/\s+/g, " ").trim().slice(0, MAX_TOPIC);
       return tg(env, "sendMessage", {
         chat_id,
         text: `🔗 Shu g'oya asosida bizning qahramonlar bilan yangi video\nNamuna: ${link[0]}\nMavzu: ${wish || NO_TOPIC}\n\nTurini tanlang (Avto — multik):`,
@@ -184,7 +185,8 @@ async function handleUpdate(update, env, origin) {
     if (topic.startsWith("/")) {
       return tg(env, "sendMessage", { chat_id, text: "Bunday buyruq yo'q. /help ni bosing." });
     }
-    topic = topic.slice(0, 200);
+    // Ko'p qatorli prompt bitta qatorga (xabardan qayta o'qilganda to'liq olinsin)
+    topic = topic.replace(/\s+/g, " ").slice(0, MAX_TOPIC);
     return tg(env, "sendMessage", {
       chat_id,
       text: `🎬 Yangi video\nMavzu: ${topic || NO_TOPIC}\n\nTurini tanlang:`,

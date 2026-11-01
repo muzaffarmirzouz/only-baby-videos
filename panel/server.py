@@ -48,7 +48,7 @@ def create_video(data):
     privacy = data.get("privacy", "public")
     fmt = data.get("format", "long")
     length = "" if fmt == "short" else str(data.get("length", "3"))
-    topic = str(data.get("topic", "")).strip()[:200]
+    topic = " ".join(str(data.get("topic", "")).split())[:2000]
     reference = str(data.get("reference", "")).strip()
     if reference and not YT_RE.match(reference):
         raise ValueError("Namuna YouTube havolasi bo'lishi kerak")

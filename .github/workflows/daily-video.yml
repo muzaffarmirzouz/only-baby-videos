@@ -1,7 +1,7 @@
 # Har kuni 1 ta uzun video va 3 ta Shorts yaratib, YouTube kanalga yuklaydi.
 # Qo'lda ishga tushirish: GitHub → Actions → "Daily kids video" → Run workflow
 name: Daily kids video
-run-name: ${{ github.event_name == 'schedule' && (github.event.schedule == '0 14 * * *' && 'Kunlik uzun video (avto)' || 'Kunlik Shorts (avto)') || format('{0} · {1} · {2}', inputs.format == 'short' && 'Shorts' || format('{0} daq', inputs.length || '3'), inputs.type, inputs.topic || (inputs.reference && 'namuna asosida') || 'AI mavzu tanlaydi') }}
+run-name: ${{ github.event_name == 'schedule' && (github.event.schedule == '0 14 * * *' && 'Kunlik uzun video (avto)' || 'Kunlik Shorts (avto)') || format('{0} · {1} · {2}', inputs.format == 'short' && 'Shorts' || format('{0} daq', inputs.length || '3'), inputs.type, (inputs.topic && 'prompt bilan') || (inputs.reference && 'namuna asosida') || 'AI mavzu tanlaydi') }}
 
 on:
   schedule:

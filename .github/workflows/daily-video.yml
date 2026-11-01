@@ -48,6 +48,7 @@ on:
 
 permissions:
   contents: write # topics_used.json ni saqlash uchun
+  actions: write # navbatdagi (queued-*) artifact'larni o'qish va o'chirish
 
 jobs:
   video:
@@ -96,9 +97,19 @@ jobs:
           git clone -q --depth 1 "https://x-access-token:${MUSIC_TOKEN}@github.com/${{ github.repository_owner }}/only-baby-music.git" assets/music \
             && echo "Treklar: $(ls assets/music/*.mp3 | wc -l)" || echo "Musiqa olinmadi — musiqasiz davom etamiz"
 
+      - name: Navbatdagi videolar (YouTube limiti tufayli kutayotganlar)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VIDEO_PRIVACY: ${{ inputs.privacy || vars.YOUTUBE_PRIVACY || 'public' }}
+        run: python -W ignore main.py --upload-pending --privacy "$VIDEO_PRIVACY"
+
       - name: Video yaratish va yuklash
         id: video
         env:
+          GH_TOKEN: ${{ github.token }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           POLLINATIONS_KEY: ${{ secrets.POLLINATIONS_KEY }}
@@ -129,11 +140,15 @@ jobs:
           VIDEO_URL: ${{ steps.video.outputs.video_url }}
           THUMB: ${{ steps.video.outputs.thumbnail }}
           COST: ${{ steps.video.outputs.cost }}
+          QUEUED: ${{ steps.video.outputs.queued }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then echo "Telegram sozlanmagan"; exit 0; fi
           api="https://api.telegram.org/bot$TG_TOKEN"
-          if [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
+          if [ "$OUTCOME" = "success" ] && [ "$QUEUED" = "1" ]; then
+            text=$(printf '⏳ Video tayyor, lekin YouTube bugungi yuklash limiti tugadi.\n\n%s\n\nKeyingi ishga tushishda avtomatik yuklanadi.' "$TITLE")
+            curl -s -o /dev/null -d chat_id="$TG_CHAT" --data-urlencode text="$text" "$api/sendMessage"
+          elif [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
             caption=$(printf '✅ Yangi video yuklandi!\n\n%s\n%s' "$TITLE" "$VIDEO_URL")
             if [ -n "$COST" ] && [ "$COST" != "0.00" ]; then caption=$(printf '%s\n\n💰 Rasm va ovoz: ~$%s' "$caption" "$COST"); fi
             if [ -f "$THUMB" ]; then
@@ -150,7 +165,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: video-${{ github.run_number }}
+          name: ${{ steps.video.outputs.queued == '1' && 'queued' || 'video' }}-${{ github.run_number }}
           path: |
             output/*/final.mp4
             output/*/thumbnail.jpg

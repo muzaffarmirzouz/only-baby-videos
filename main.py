@@ -111,9 +111,18 @@ def main():
     ap.add_argument("--voice", help="edge-tts ovozi, masalan en-US-AnaNeural (bo'lmasa config.yaml dagisi)")
     ap.add_argument("--reference", help="yoqqan YouTube video havolasi — shu formatda original video yasaladi")
     ap.add_argument("--free", action="store_true", help="pullik rejimni o'chirish (faqat tekin xizmatlar)")
+    ap.add_argument("--upload-pending", action="store_true",
+                    help="faqat navbatdagi (limit tufayli kutayotgan) videolarni yuklash")
     ap.add_argument("--style", choices=["auto", "stock", "ai"], default="auto",
                     help="stock = Pixabay video/rasm, ai = AI rasm, auto = config.yaml dagi tartib")
     args = ap.parse_args()
+    if args.upload_pending:
+        from pipeline import pending
+        from pipeline.uploader import upload
+        cfg["youtube"]["privacy"] = args.privacy or cfg["youtube"]["privacy"]
+        for title, url in pending.upload_all(cfg["youtube"], upload):
+            pending.notify(f"✅ Navbatdagi video yuklandi!\n\n{title}\n{url}")
+        return
     if args.length is None:
         args.length = 0.75 if args.format == "short" else 3
     if args.privacy:
@@ -344,9 +353,21 @@ def main():
     TOPICS_FILE.write_text(json.dumps(topics, indent=2, ensure_ascii=False))
     from pipeline.uploader import upload
     print("YouTube'ga yuklanmoqda...")
-    vid = upload(final, script, None if short else thumb, cfg["youtube"])
-    print(f"  Yuklandi: https://youtu.be/{vid}  (holat: {cfg['youtube']['privacy']})")
     gh_output = os.getenv("GITHUB_OUTPUT")
+    try:
+        vid = upload(final, script, None if short else thumb, cfg["youtube"])
+    except Exception as e:
+        from pipeline import pending
+        if not (pending.is_limit_error(e) and os.getenv("GITHUB_ACTIONS")):
+            raise
+        # YouTube kunlik limiti: video yo'qolmasin — artifact "queued-N" bo'lib saqlanadi va keyin yuklanadi
+        print("  ⏳ YouTube kunlik limiti tugadi — video navbatga qo'yildi")
+        if gh_output:
+            with open(gh_output, "a") as f:
+                f.write(f"queued=1\nthumbnail={thumb}\ncost={cost:.2f}\n")
+                f.write(f"title<<__EOT__\n{script['title']}\n__EOT__\n")
+        return
+    print(f"  Yuklandi: https://youtu.be/{vid}  (holat: {cfg['youtube']['privacy']})")
     if gh_output:  # keyingi qadam (Telegram xabarnomasi) uchun
         with open(gh_output, "a") as f:
             f.write(f"video_url=https://youtu.be/{vid}\nthumbnail={thumb}\ncost={cost:.2f}\n")

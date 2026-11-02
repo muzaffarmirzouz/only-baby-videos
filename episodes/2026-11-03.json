@@ -1,0 +1,27 @@
+{
+  "title": "Bella's Puzzle Adventure",
+  "summary": "Today, Bella has a special puzzle for Baby Leo and Bobo. They learn about shapes and how to work together to fit the pieces. In the end, they create a beautiful picture and discover the joy of teamwork!",
+  "lesson": "Kids learn about shapes and teamwork.",
+  "beats": [
+    "Baby Leo, Bella, and Bobo are playing outside. Bella has a colorful puzzle that is missing pieces.",
+    "Bella says, 'Let's work together to solve the puzzle!' Baby Leo asks, 'What shapes do we need?'",
+    "They find different shapes: circles, squares, and triangles around the garden.",
+    "Bobo lifts up a large circular piece with his strong arms. Baby Leo cheers, 'Good job, Bobo!'",
+    "They all work together, fitting pieces into the puzzle. Bella uses her clever ideas to guide them.",
+    "Sometimes, they get a piece wrong, and Baby Leo reminds them, 'Let's try again!'",
+    "With each piece they find, the picture starts to come together. They are excited!",
+    "Finally, they place the last piece. Bella claps and says, 'We did it! Look at our beautiful picture!'",
+    "The friends celebrate their teamwork and admire their puzzle.",
+    "They remember that working together is fun and helps them learn!"
+  ],
+  "flow_prompts": [
+    "Use the saved characters Baby Leo, Bella, Bobo exactly as in their references. In a sunny garden, Bella shows the colorful puzzle pieces to Baby Leo and Bobo. Slow push-in. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music.",
+    "Use the saved characters Baby Leo, Bella, Bobo exactly as in their references. In the garden, Bobo is lifting a large circular puzzle piece while Baby Leo cheers him on. Medium shot showing their excitement. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music.",
+    "Use the saved characters Baby Leo, Bella, Bobo exactly as in their references. The friends are fitting pieces into the puzzle together. Bella is giving ideas, while Baby Leo and Bobo are focusing. Wide shot showing their teamwork. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music.",
+    "Use the saved characters Baby Leo, Bella, Bobo exactly as in their references. The friends celebrate as they complete the puzzle, clapping and smiling at their beautiful picture. Close-up shot of their happy faces. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music."
+  ],
+  "date": "2026-11-03",
+  "number": 2,
+  "video": "https://youtu.be/c6Ul8c8rxuc",
+  "video_title": "Join Bobo, Bella, and Leo on a Puzzle Adventure! | Only Baby & Friends"
+}

@@ -1,0 +1,55 @@
+{
+  "title": "Baby Leo and Friends Learn to Count Fun!",
+  "summary": "Today, Baby Leo, Bella, and Bobo discover the joy of counting. With the help of Twinkle, they find colorful objects to count together. They learn that counting can be fun and useful!",
+  "lesson": "Kids learn to count from one to ten using fun objects.",
+  "beats": [
+    {
+      "beat": "Baby Leo, Bella, and Bobo are playing outside when Twinkle sparkles in to greet them. They remember their fun adventures and are excited to see her again. Twinkle has an idea for a new game."
+    },
+    {
+      "beat": "Twinkle tells the friends they will count fun objects in the garden. She shows them a big basket filled with colorful toys. Baby Leo asks, \"Why do we count, Twinkle?\""
+    },
+    {
+      "beat": "Twinkle smiles and says, \"Counting helps us know how many there are!\" Bella adds, \"And we can use it to share!\" They all agree to count the toys together."
+    },
+    {
+      "beat": "They each pick a toy from the basket. Bobo chooses a big red ball. Bella picks a soft yellow duck. Baby Leo grabs a blue car. They are excited!"
+    },
+    {
+      "beat": "Twinkle says, \"Let’s count together! One, two, three...\" The friends giggle as they count. They enjoy saying the numbers out loud, feeling happy and cheerful."
+    },
+    {
+      "beat": "Suddenly, Bobo drops his ball! It rolls away and lands in a bush. The friends look worried. Baby Leo says, \"Let’s count to find it!\" They start counting together."
+    },
+    {
+      "beat": "They say, \"One, two, three, four...\" They search together. Bella hops next to Baby Leo, and Bobo uses his strength to peek into the bush."
+    },
+    {
+      "beat": "Finally, they find the ball! Bobo cheers, \"We counted to find it!\" Twinkle sparkles with joy and says, \"Great counting, friends!\" They all hug Bobo."
+    },
+    {
+      "beat": "Twinkle reminds them, \"Counting is fun and helps us!\" Baby Leo says, \"Let’s count the toys again!\" They all laugh, happily counting one more time."
+    },
+    {
+      "beat": "As the sun sets, the friends enjoy counting the colorful toys. They feel proud and excited about learning together. The day ends on a happy note with lots of giggles."
+    }
+  ],
+  "flow_prompts": [
+    {
+      "prompt": "Use the saved characters Baby Leo, Bella, Bobo, and Twinkle exactly as in their references. In a sunny garden, the friends gather around a colorful basket of toys. They smile and look excited. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music."
+    },
+    {
+      "prompt": "Use the saved characters Baby Leo, Bella, Bobo, and Twinkle exactly as in their references. The friends are counting together, pointing to the toys in the basket. Baby Leo looks curious, Bella is enthusiastic, and Bobo is giggling. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music."
+    },
+    {
+      "prompt": "Use the saved characters Baby Leo, Bella, Bobo, and Twinkle exactly as in their references. Bobo drops his ball, which rolls into a bush. The friends look worried, but Baby Leo is brave and ready to help. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music."
+    },
+    {
+      "prompt": "Use the saved characters Baby Leo, Bella, Bobo, and Twinkle exactly as in their references. The friends find the ball in the bush and cheer happily. They hug each other, feeling proud of their counting. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music."
+    }
+  ],
+  "date": "2026-11-04",
+  "number": 3,
+  "video": "https://youtu.be/DUhRdVVwMpE",
+  "video_title": "Counting Fun with Baby Leo and Friends! | Only Baby & Friends"
+}

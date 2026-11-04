@@ -111,4 +111,6 @@ def share(final, script, youtube_url, workdir):
         return url
     except Exception as e:  # Instagram xatosi YouTube'ga ta'sir qilmasin
         print(f"  ! Instagram'ga joylanmadi: {e}")
+        from pipeline import pending
+        pending.notify(f"⚠️ YouTube'ga chiqdi, lekin Instagram'ga joylanmadi.\n\n{script['title']}\n{youtube_url}\n\nSabab: {' '.join(str(e).split())[:300]}")
         return None

@@ -35,7 +35,12 @@ def main():
         script = json.loads((video.parent / "script.json").read_text())
         url = instagram.share(video, script, item["url"], video.parent)  # xatoni o'zi Telegram'ga yozadi
     if not url:
-        sys.exit(1)
+        # O'tmagan video ro'yxatni to'xtatmasin: oxiriga o'tadi, navbatdagisi keyingi safar joylanadi
+        items.remove(item)
+        items.append(item)
+        LIST.write_text(json.dumps(items, indent=2, ensure_ascii=False) + "\n")
+        print(f"  Ro'yxat oxiriga o'tkazildi: {item['title']}")
+        return
     item["instagram"] = url
     LIST.write_text(json.dumps(items, indent=2, ensure_ascii=False) + "\n")
     left = len(todo) - 1

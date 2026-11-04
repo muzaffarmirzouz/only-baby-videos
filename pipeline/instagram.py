@@ -38,7 +38,7 @@ def _prepare(video_path):
     return out
 
 
-def _upload(token, ig, data, caption, tries=8):
+def _upload(token, ig, data, caption, tries=6):
     """Instagram rupload ba'zan sababsiz rad etadi (ProcessingFailedError) — yangi konteyner bilan qayta urinamiz."""
     last = ""
     for attempt in range(tries):
@@ -50,7 +50,7 @@ def _upload(token, ig, data, caption, tries=8):
         if up.ok and up.json().get("success"):
             return c["id"]
         last = up.text[:200]
-        time.sleep(5 + attempt * 5)
+        time.sleep(30 * (attempt + 1))  # jami ~7 daqiqa: xato vaqtincha bo'lsa o'tib ketadi, Meta'ga ham yumshoq
     raise RuntimeError(f"Instagram: video {tries} urinishda ham yuklanmadi ({last})")
 
 

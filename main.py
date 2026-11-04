@@ -115,6 +115,11 @@ def publish_dir(d, cfg, privacy=None):
             f.write(f"title<<__EOT__\n{script['title']}\n__EOT__\n")
 
 
+def image_prompt_of(scene):
+    """AI ba'zan image_prompt yozmaydi — video to'xtab qolmasin."""
+    return scene.get("image_prompt") or scene.get("background_prompt") or scene["narration"]
+
+
 def load_series():
     f = CHARACTERS_DIR / "cast.yaml"
     return yaml.safe_load(f.read_text()) if f.exists() else None
@@ -249,7 +254,7 @@ def main():
 
     def fetch_media(scene, i, img, clip):
         """Sozlamadagi tartibda manbalarni sinaydi. Video bo'lsa davomiyligini qaytaradi."""
-        query = scene.get("search_query") or scene["image_prompt"]
+        query = scene.get("search_query") or image_prompt_of(scene)
         # Viktorinada rasm javob ochilguncha xiralashtiriladi — video klip kerak emas
         for src in [s for s in sources if not (scene.get("quiz") and s == "pixabay_video")]:
             try:
@@ -263,11 +268,11 @@ def main():
                     if pixabay.image(query, img, image_type=src.split("_", 1)[1]):
                         return None
                 elif src == "openai":
-                    prompt = f"{scene['image_prompt']}. Characters: {characters}. Style: {style}"
+                    prompt = f"{image_prompt_of(scene)}. Characters: {characters}. Style: {style}"
                     if premium.image(prompt, img, vcfg["width"], vcfg["height"]):
                         return None
                 elif src == "ai":
-                    prompt = f"{scene['image_prompt']}. {characters}. {style}"
+                    prompt = f"{image_prompt_of(scene)}. {characters}. {style}"
                     if images.generate(prompt, img, vcfg["width"], vcfg["height"], seed=base_seed + i):
                         return None
             except Exception as e:

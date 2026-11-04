@@ -36,6 +36,7 @@ type Scene = {
   quiz?: Quiz | null;
   puppets?: Puppet[];
   effect?: string | null;
+  word?: string | null; // ingliz tili darsi: o'rgatilayotgan so'z ekranda
   clipVolume?: number; // foydalanuvchi klipining o'z ovozi (Flow effektlari); 0 = o'chiq
   image: string;
   video: string | null;
@@ -203,6 +204,27 @@ const SceneView: React.FC<{ scene: Scene; index: number; cartoon: boolean; verti
       </AbsoluteFill>
       {scene.effect && scene.effect !== "none" ? <Particles effect={scene.effect} /> : null}
       <Audio src={staticFile(scene.audio)} />
+      {scene.word ? (
+        <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: vertical ? 340 : 70 }}>
+          <div
+            style={{
+              padding: vertical ? "20px 60px" : "16px 60px",
+              maxWidth: vertical ? 960 : 780, // Instagram parchasida markazdagi 3:4 qism qoladi
+              borderRadius: 48,
+              backgroundColor: "white",
+              border: "8px solid #ffb800",
+              color: "#1e1e5a",
+              fontFamily: fontFamily,
+              fontSize: vertical ? 120 : 110,
+              fontWeight: 700,
+              textAlign: "center",
+              transform: `scale(${spring({ frame: frame - 8, fps, config: { damping: 10 } })})`,
+            }}
+          >
+            {scene.word}
+          </div>
+        </AbsoluteFill>
+      ) : null}
       {caption ? (
         <AbsoluteFill
           style={{

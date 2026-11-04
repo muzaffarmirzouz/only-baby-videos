@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT))
 
 PORT = 8770
 WORKFLOW = "daily-video.yml"
-TYPES = {"auto", "story", "education", "facts", "cartoon", "games"}
+TYPES = {"auto", "story", "education", "facts", "cartoon", "games", "english"}
 YT_RE = re.compile(r"^https?://(www\.|m\.)?(youtube\.com|youtu\.be)/\S+$")
 STYLES = {"auto", "stock", "ai"}
 PRIVACY = {"public", "unlisted", "private"}

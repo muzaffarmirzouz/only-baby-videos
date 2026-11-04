@@ -20,6 +20,7 @@ TYPE_GUIDES = {
     "education": "A fun learning video (for example the alphabet, numbers, colors, shapes, animals, days of the week). Repeat key words, ask the child to say things out loud, and review at the end.",
     "facts": "Amazing fun facts for kids about one theme (animals, space, ocean, dinosaurs, nature, the human body). Each fact is explained simply with a comparison a child understands.",
     "cartoon": "An original animated cartoon episode with a recurring cute duo of characters (invent them, e.g. a little fox and a bunny), a fun adventure with gentle humor, short lines of dialogue inside the narration (\"Wow!\" said Pip.), and a happy ending.",
+    "english": "An English lesson for little kids who are learning English as a new language: one simple everyday theme (for example fruits, colors, animals, family, body parts, toys, food, clothes, greetings). Teach one new word or very short phrase in each scene, slowly and clearly, with very simple sentences. The first scene says hello and names the theme; the last scene quickly reviews all the words and praises the child.",
     "games": "An interactive quiz game for kids (e.g. guess the animal, which color, count the objects, what sound, odd one out). The first scene welcomes kids and explains the game; the last scene praises them and says goodbye. Every scene in between is one quiz question.",
 }
 
@@ -30,6 +31,13 @@ QUIZ_FORMAT = """For quiz scenes add:
 For quiz scenes, "narration" reads the question and the three options (A, B, C) and ends with "Think fast!" (about 25 words).
 The image_prompt / search_query must show the CORRECT answer (it is revealed after the countdown).
 Intro and goodbye scenes have no "quiz" field."""
+
+# Ingliz tili darsi: so'z ekranda yoziladi, o'qituvchi aytadi, bola ovozi takrorlaydi
+ENGLISH_FORMAT = """For every lesson scene add "word": the word or short phrase taught in this scene (1-3 words, lowercase).
+The first (hello) and last (review) scenes have "word": "".
+Lesson scene narration, in this order: say the word in a tiny sentence, invite the child to repeat, then a child repeats it inside double quotes, then one more tiny sentence using it.
+Example: This is an apple. Say it with me. "Apple!" Great job! The apple is red.
+The image_prompt shows ONLY that one thing, big and clear in the center of the picture, so the meaning is obvious without words."""
 
 # Multik: qahramonlar alohida chiziladi va Remotion'da harakatlantiriladi ("qo'g'irchoq" animatsiya)
 CARTOON_ACTIONS = ["walk_in", "run_across", "hop", "wave", "bounce", "spin", "peek", "idle"]
@@ -276,6 +284,9 @@ Return JSON:
                 rules = f"{QUIZ_FORMAT}\n{first}{last}EVERY other scene MUST be a quiz scene with the quiz and answer_narration fields."
             if short:
                 rules += "\nimage_prompt: vertical portrait composition, subject in the center."
+            if video_type == "english":
+                rules += f"\n{ENGLISH_FORMAT}"
+                example = example[:-1] + ', "word": "apple"}'
             if cartoon:
                 names = [c["name"] for c in outline.get("cast", [])]
                 props = [p["name"] for p in outline.get("props") or []]

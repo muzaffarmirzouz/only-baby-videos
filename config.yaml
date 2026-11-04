@@ -41,6 +41,7 @@ media:
   facts: [pixabay_video, pixabay_photo, ai]
   cartoon: [ai, pixabay_illustration]
   games: [pixabay_photo, pixabay_illustration, ai]
+  english: [ai, pixabay_illustration]
 
 # Pullik rejim (OpenAI). enabled: false — hammasi tekin xizmatlarda ishlaydi.
 # OpenAI'da oylik xarajat chegarasini qo'yishni unutmang: platform.openai.com → Settings → Limits

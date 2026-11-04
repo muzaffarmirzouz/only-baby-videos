@@ -22,9 +22,9 @@ from pipeline import animate, images, premium as premium_mod, stock, tts, video_
 
 ROOT = Path(__file__).resolve().parent
 TOPICS_FILE = ROOT / "topics_used.json"
-VIDEO_TYPES = ["story", "education", "facts", "cartoon", "games"]
+VIDEO_TYPES = ["story", "education", "facts", "cartoon", "games", "english"]
 QUIZ_COUNTDOWN = 5  # soniya
-PREMIUM_FIRST = {"story", "cartoon", "education"}  # pullik rejimda OpenAI rasmi birinchi
+PREMIUM_FIRST = {"story", "cartoon", "education", "english"}  # pullik rejimda OpenAI rasmi birinchi
 STYLE_SOURCES = {
     "stock": ["pixabay_video", "pixabay_photo", "pixabay_illustration", "ai"],
     "ai": ["ai", "pixabay_illustration"],
@@ -39,6 +39,7 @@ def load_topics():
 SCHEDULE_TYPES = {
     6: ["cartoon"],                      # Shorts, Toshkent 11:00
     10: ["games", "education"],          # Shorts, Toshkent 15:00
+    12: ["english"],                     # uzun ingliz tili darsi, Toshkent 17:00
     14: ["cartoon", "story"],            # uzun video, Toshkent 19:00
     18: ["cartoon"],                     # Shorts, Toshkent 23:00
 }
@@ -370,6 +371,7 @@ def main():
                 "video": clip if clip_dur else None, "video_duration": clip_dur,
                 "captions": tts.caption_chunks(scene["narration"], dur),
                 "puppets": puppets,
+                "word": scene.get("word") or None,
                 "effect": scene.get("effect") if puppets else None,
                 # Flow kliplari: o'z ovoz effektlari (olma tishlash va h.k.) saqlanadi
                 "clip_volume": vcfg.get("clip_sound_volume", 0.6) if scene.get("user_clip") else 0}

@@ -3,7 +3,7 @@
 import APP_HTML from "./app.html";
 
 const WORKFLOW = "daily-video.yml";
-const TYPES = { auto: "Avto", story: "Ertak", education: "Ta'limiy", facts: "Faktlar", cartoon: "Multik", games: "O'yin" };
+const TYPES = { auto: "Avto", story: "Ertak", education: "Ta'limiy", facts: "Faktlar", cartoon: "Multik", games: "O'yin", english: "Ingliz tili" };
 const YT_RE = /https?:\/\/(?:www\.|m\.)?(?:youtube\.com|youtu\.be)\/\S+/;
 const LENGTHS = ["3", "5", "10", "15", "20"];
 const STYLES = ["auto", "stock", "ai"];
@@ -114,6 +114,7 @@ function typeKeyboard() {
       [{ text: "🎲 Avto", callback_data: "t:auto" }, { text: "📖 Ertak", callback_data: "t:story" }],
       [{ text: "🔤 Ta'limiy", callback_data: "t:education" }, { text: "🦋 Faktlar", callback_data: "t:facts" }],
       [{ text: "🎨 Multik", callback_data: "t:cartoon" }, { text: "🎮 O'yin", callback_data: "t:games" }],
+      [{ text: "🇬🇧 Ingliz tili", callback_data: "t:english" }],
     ],
   };
 }

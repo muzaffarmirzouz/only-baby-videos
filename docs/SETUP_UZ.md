@@ -45,7 +45,7 @@ Natija: `output/<sana-nom>/final.mp4` va `thumbnail.jpg`. Ochib ko'ring.
 .venv/bin/python main.py --type education --length 10 --topic "numbers 1 to 20"
 .venv/bin/python main.py --type facts --length 20 --privacy unlisted
 ```
-Turlari: `story` (ertak), `education` (ABC, sonlar, ranglar), `facts` (qiziqarli faktlar).
+Turlari: `story` (ertak), `education` (ABC, sonlar, ranglar), `facts` (qiziqarli faktlar), `english` (ingliz tili darsi).
 Uzunlik: istalgan daqiqa (`3`, `10`, `15`, `20`).
 
 ## 5. Fon musiqasi (ixtiyoriy)

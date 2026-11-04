@@ -30,8 +30,11 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Python paketlari
-        run: pip install -q -r requirements.txt
+      - name: Paketlar (ffmpeg Instagram nusxasi uchun kerak)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg
+          pip install -q -r requirements.txt
 
       - name: YouTube kalitlari
         env:

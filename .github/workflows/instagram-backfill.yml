@@ -1,0 +1,49 @@
+# O'tib ketgan videolarni Instagram'ga kuniga 2 tadan joylaydi (backfill.json). Ro'yxat tugagach hech narsa qilmaydi.
+name: Instagram backfill
+
+on:
+  schedule:
+    - cron: "0 5 * * *" # Toshkent 10:00
+    - cron: "0 12 * * *" # Toshkent 17:00
+  workflow_dispatch:
+
+permissions:
+  contents: write # backfill.json ni yangilash
+  actions: read # artifact'ni yuklab olish
+
+jobs:
+  backfill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Paketlar
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg
+          pip install -q -r requirements.txt
+
+      - name: Navbatdagi videoni Instagram'ga joylash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_USER_ID: ${{ secrets.INSTAGRAM_USER_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -W ignore scripts/instagram_backfill.py
+
+      - name: Ro'yxatni saqlash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch -q origin main
+          git reset -q origin/main
+          git add backfill.json
+          git diff --cached --quiet || (git commit -m "Instagram backfill yangilandi [skip ci]" && git push origin HEAD:main)

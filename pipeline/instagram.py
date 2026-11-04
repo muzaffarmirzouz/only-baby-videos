@@ -75,7 +75,7 @@ def publish_reel(video_path, caption):
     return info.get("permalink", f"https://www.instagram.com/reel/{media}")
 
 
-def vertical_excerpt(video, out_path, start=3.0, seconds=45):
+def vertical_excerpt(video, out_path, start=0, seconds=45):
     """Uzun gorizontal epizoddan vertikal (1080x1920) parcha: markazdagi 3:4 qism katta, orqada xira fon."""
     subprocess.run([
         "ffmpeg", "-v", "error", "-y", "-ss", str(start), "-t", str(seconds), "-i", str(video),

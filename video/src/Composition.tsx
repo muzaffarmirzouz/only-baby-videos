@@ -50,24 +50,19 @@ export type Props = {
   kind: string;
   vertical: boolean; // Shorts: 1080x1920
   showCaptions?: boolean; // ekrandagi subtitrlar (standart: yo'q)
-  clipMode?: boolean; // Flow kliplari: sarlavhasiz, pauzasiz, o'tishlarsiz — kliplar ketma-ket
+  clipMode?: boolean; // Flow kliplari: pauzasiz, o'tishlarsiz — kliplar ketma-ket
   music: string | null;
   musicVolume: number;
   scenes: Scene[];
 };
 
 const FPS = 30;
-const introFrames = (vertical: boolean) => (vertical ? 45 : 90); // Shorts'da intro qisqa
 const PAUSE_SECONDS = 0.5;
-const COLORS = ["#ff5fa2", "#ffb800", "#38c9ff", "#7bdc4f", "#a970ff"];
 
 const sceneFrames = (s: Scene, clipMode = false) => Math.ceil((s.duration + (clipMode ? 0 : PAUSE_SECONDS)) * FPS);
 
 const calculateMetadata: CalculateMetadataFunction<Props> = ({ props }) => {
-  const total = props.scenes.reduce(
-    (sum, s) => sum + sceneFrames(s, props.clipMode),
-    props.clipMode ? 0 : introFrames(props.vertical),
-  );
+  const total = props.scenes.reduce((sum, s) => sum + sceneFrames(s, props.clipMode), 0);
   return {
     durationInFrames: Math.max(total, 1),
     width: props.vertical ? 1080 : 1920,
@@ -93,7 +88,6 @@ export const MyComposition = () => {
 };
 
 export const KidsVideo: React.FC<Props> = ({
-  title,
   kind,
   vertical,
   showCaptions,
@@ -108,11 +102,6 @@ export const KidsVideo: React.FC<Props> = ({
     <AbsoluteFill style={{ backgroundColor: "#fff4d6" }}>
       {music ? <Audio src={staticFile(music)} volume={musicVolume} loop /> : null}
       <Series>
-        {clipMode ? null : (
-          <Series.Sequence durationInFrames={introFrames(vertical)}>
-            <Intro title={title.replace(/\s*#shorts/i, "")} image={scenes[0]?.image} vertical={vertical} />
-          </Series.Sequence>
-        )}
         {scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={sceneFrames(s, clipMode)}>
             {s.quiz ? (
@@ -123,46 +112,6 @@ export const KidsVideo: React.FC<Props> = ({
           </Series.Sequence>
         ))}
       </Series>
-    </AbsoluteFill>
-  );
-};
-
-const Intro: React.FC<{ title: string; image?: string; vertical: boolean }> = ({ title, image, vertical }) => {
-  const frame = useCurrentFrame();
-  const { durationInFrames } = useVideoConfig();
-  const { fps } = useVideoConfig();
-  const words = title.split(" ");
-  const fadeOut = interpolate(frame, [durationInFrames - 12, durationInFrames], [1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  return (
-    <AbsoluteFill style={{ opacity: fadeOut }}>
-      {image ? (
-        <Img src={staticFile(image)} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(8px) brightness(0.9)" }} />
-      ) : null}
-      <AbsoluteFill style={{ justifyContent: "center", alignContent: "center", alignItems: "center", padding: vertical ? 70 : 120, flexWrap: "wrap", flexDirection: "row", gap: 28 }}>
-        {words.map((w, i) => {
-          const pop = spring({ frame: frame - i * 4, fps, config: { damping: 9, mass: 0.6 } });
-          return (
-            <span
-              key={i}
-              style={{
-                fontFamily: fontFamily,
-                fontSize: vertical ? 130 : 120,
-                fontWeight: 700,
-                color: COLORS[i % COLORS.length],
-                WebkitTextStroke: "6px #1e1e5a",
-                paintOrder: "stroke fill",
-                transform: `scale(${pop}) rotate(${(i % 2 ? 1 : -1) * 4 * (1 - pop)}deg)`,
-                display: "inline-block",
-              }}
-            >
-              {w}
-            </span>
-          );
-        })}
-      </AbsoluteFill>
     </AbsoluteFill>
   );
 };

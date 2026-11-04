@@ -12,21 +12,29 @@ style: >-
 characters:
   - name: Baby Leo
     image: baby.png
+    voice: en-US-AnaNeural # bola ovozi
+    pitch: "+0Hz"
     look: a smiling baby boy with brown messy hair, big brown eyes, cream pajamas with yellow stars and blue collar
     personality: curious and cheerful, loves learning new things and asking "why?"
     skill: brave explorer — notices small details and never gives up
   - name: Bella
     image: bunny.png
+    voice: en-GB-MaisieNeural # bola ovozi
+    pitch: "+0Hz"
     look: a small white fluffy bunny with pink inner ears and big blue eyes
     personality: smart and kind, always has a good idea and helps her friends
     skill: clever plans and super fast hopping
   - name: Bobo
     image: teddy.png
+    voice: en-US-AnaNeural # bola ovozi
+    pitch: "-20Hz"
     look: a brown teddy bear with a red bow tie
     personality: funny and cuddly, loves snacks, a little bit shy but very brave when friends need him
     skill: very strong — can lift, push and carry big things, gives the best warm hugs
   - name: Twinkle
     image: star.png
+    voice: en-GB-MaisieNeural # bola ovozi
+    pitch: "+25Hz"
     look: a smiling glossy yellow star with tiny arms and legs
     personality: magical and sparkly, takes the friends on adventures and can glow in the dark
     skill: can fly, glow to light up the dark and sprinkle a little sparkle magic

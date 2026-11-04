@@ -342,7 +342,8 @@ def main():
         if audio.exists():
             dur = tts.audio_duration(audio)
         else:
-            dur = tts.synthesize(scene["narration"], audio, cfg["voice"], cfg["voice_rate"], premium=premium)
+            dur = tts.speak_scene(scene["narration"], audio, cfg["voice"], cfg["voice_rate"], premium=premium,
+                                  cast=(series or {}).get("characters"), speaker=scene.get("speaker"))
         puppets = puppets_for(scene) if sprites and scene.get("background_prompt") else []
         if clip.exists():
             clip_dur = tts.audio_duration(clip)

@@ -19,7 +19,7 @@ TYPE_GUIDES = {
     "story": "An original bedtime-style fairy tale with a clear beginning, problem, solution and a gentle moral at the end.",
     "education": "A fun learning video (for example the alphabet, numbers, colors, shapes, animals, days of the week). Repeat key words, ask the child to say things out loud, and review at the end.",
     "facts": "Amazing fun facts for kids about one theme (animals, space, ocean, dinosaurs, nature, the human body). Each fact is explained simply with a comparison a child understands.",
-    "cartoon": "An original animated cartoon episode with a recurring cute duo of characters (invent them, e.g. a little fox and a bunny), a fun adventure with gentle humor, short lines of dialogue inside the narration ('Wow!' said Pip.), and a happy ending.",
+    "cartoon": "An original animated cartoon episode with a recurring cute duo of characters (invent them, e.g. a little fox and a bunny), a fun adventure with gentle humor, short lines of dialogue inside the narration (\"Wow!\" said Pip.), and a happy ending.",
     "games": "An interactive quiz game for kids (e.g. guess the animal, which color, count the objects, what sound, odd one out). The first scene welcomes kids and explains the game; the last scene praises them and says goodbye. Every scene in between is one quiz question.",
 }
 
@@ -44,6 +44,9 @@ For EVERY scene also add:
   "props": objects from the props list visible in this scene (or []), each {"name": exact prop name, "position": "left" | "center" | "right",
            "action": one of ["drive_across", "roll", "float", "bounce", "idle"]}.
 Props are drawn separately: keep them OUT of background_prompt.
+Spoken lines are read aloud by real children's voices, so most scenes should have one short line a character says:
+write it inside the narration in double quotes and name who says it, e.g. "Look, a kite!" said Bella.
+Only the characters speak inside the quotes; the storyteller tells the rest.
 Choose actions that match the story (walk_in when arriving, hop when happy, wave when greeting, peek when shy or hiding).
 Emotions follow the story: sad or crying when something goes wrong, angry (a grumpy pout) only briefly in a small quarrel,
 and everyone happy again by the end.""" % (

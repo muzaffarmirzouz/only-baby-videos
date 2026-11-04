@@ -68,7 +68,7 @@ Brauzerda http://localhost:8770 ochiladi:
 ```bash
 cd video && npm run dev
 ```
-Dizayn `video/src/Composition.tsx` da: intro sarlavha, Ken Burns harakati, subtitrlar, o'tishlar.
+Dizayn `video/src/Composition.tsx` da: Ken Burns harakati, subtitrlar, o'tishlar.
 
 ## Sozlamalar — `config.yaml`
 - `voice` — ovoz (masalan `en-US-AnaNeural` bola ovozi).

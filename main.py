@@ -35,22 +35,10 @@ def load_topics():
     return json.loads(TOPICS_FILE.read_text()) if TOPICS_FILE.exists() else []
 
 
-# Kunlik taqsimot (UTC soat → turlar navbati): asosan multik
-SCHEDULE_TYPES = {
-    12: ["english"],                     # uzun ingliz tili darsi, Toshkent 17:00
-    14: ["cartoon", "story"],            # uzun video, Toshkent 19:00
-    18: ["cartoon", "games"],            # Shorts, Toshkent 23:00
-}
-
-
 def auto_type():
-    """Jadval bo'yicha tur; qo'lda ishga tushirilganda — kun bo'yicha asosan multik."""
-    now = datetime.utcnow()
-    day = now.timetuple().tm_yday
-    cron = os.getenv("SCHEDULE_CRON", "")  # GitHub jadvali kechiksa ham to'g'ri slot ("0 6 * * *" → 6)
-    hour = int(cron.split()[1]) if cron else now.hour
-    options = SCHEDULE_TYPES.get(hour) or ["cartoon", "cartoon", "story", "games", "education", "facts"]
-    return options[day % len(options)]
+    """Qo'lda "Avto" tanlanganda tur; kunlik jadval turni o'zi beradi (bot/src/worker.js)."""
+    options = ["cartoon", "cartoon", "story", "games", "education", "facts"]
+    return options[datetime.utcnow().timetuple().tm_yday % len(options)]
 
 
 CHARACTERS_DIR = ROOT / "assets" / "characters"
@@ -147,7 +135,7 @@ def main():
     ap.add_argument("--free", action="store_true", help="pullik rejimni o'chirish (faqat tekin xizmatlar)")
     ap.add_argument("--plan-today", action="store_true",
                     help="serialning bugungi epizodini rejalashtirish va Flow promptlarini Telegram'ga yuborish")
-    ap.add_argument("--serial", action="store_true", help="bugungi serial epizodidan video yasash (19:00)")
+    ap.add_argument("--serial", action="store_true", help="bugungi serial epizodidan video yasash (23:00)")
     ap.add_argument("--clips", help="botga yuborilgan kliplar (Telegram file_id, vergul bilan) — ulardan epizod")
     ap.add_argument("--review", action="store_true",
                     help="yuklamaslik: avval Telegram'da ko'rsatish (bot/panel buyurtmalari)")

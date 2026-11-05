@@ -1,11 +1,9 @@
-# Har kuni 13:00 (Toshkent): serialning bugungi epizodini rejalashtiradi va Flow promptlarini Telegram'ga yuboradi.
-# 19:00 dagi uzun video aynan shu reja asosida yasaladi.
+# Har kuni 13:00 (Toshkent, jadval bot/src/worker.js da): serialning bugungi epizodini rejalashtiradi va Flow promptlarini Telegram'ga yuboradi.
+# 23:00 dagi uzun video aynan shu reja asosida yasaladi.
 name: Daily Flow prompts
 run-name: Bugungi epizod rejasi va Flow promptlari
 
 on:
-  schedule:
-    - cron: "0 8 * * *" # 08:00 UTC = 13:00 Toshkent
   workflow_dispatch:
 
 permissions:

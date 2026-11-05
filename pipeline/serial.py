@@ -1,6 +1,6 @@
 """Davomli serial: har kuni yangi epizod, qahramonlar oldingi epizodlarni "eslaydi".
 
-Har kunning rejasi episodes/YYYY-MM-DD.json da: 13:00 da tuziladi (Flow promptlari Telegram'ga), 19:00 da shu reja
+Har kunning rejasi episodes/YYYY-MM-DD.json da: 13:00 da tuziladi (Flow promptlari Telegram'ga), 23:00 da shu reja
 asosida uzun video yasaladi va natija (YouTube havolasi) shu faylga yoziladi.
 """
 import html
@@ -44,7 +44,7 @@ def load_or_create(writer, series):
 
 
 def topic_for(plan):
-    """19:00 dagi uzun video uchun batafsil prompt."""
+    """23:00 dagi uzun video uchun batafsil prompt."""
     beats = " ".join(f"{i + 1}) {b}" for i, b in enumerate(plan.get("beats", [])))
     return (f"Episode {plan.get('number', '')} of the season: \"{plan['title']}\". {plan['summary']} "
             f"Story beats: {beats} Lesson: {plan.get('lesson', '')}")
@@ -65,7 +65,7 @@ def send_flow_prompts(plan):
     api = f"https://api.telegram.org/bot{token}/sendMessage"
     head = (f"🎬 <b>Bugungi epizod #{plan.get('number', '')}: {html.escape(plan['title'])}</b>\n\n"
             f"📖 {html.escape(plan['summary'])}\n\n🎓 Saboq: {html.escape(plan.get('lesson', ''))}\n\n"
-            f"Bu epizod soat 19:00 da 2–3 daqiqalik video bo'lib o'zi chiqadi.\n"
+            f"Bu epizod soat 23:00 da 2–3 daqiqalik video bo'lib o'zi chiqadi.\n"
             f"Vaqtingiz bo'lsa, quyidagi {len(plan.get('flow_prompts', []))} ta promptni Flow'da yasang "
             f"(Shorts uchun 9:16), kliplarni ketma-ket botga yuborib /epizod yozing 👇")
     requests.post(api, data={"chat_id": chat, "text": head, "parse_mode": "HTML"}, timeout=30)

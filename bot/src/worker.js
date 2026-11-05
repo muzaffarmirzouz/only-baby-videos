@@ -15,7 +15,36 @@ const VOICES = [
 const NO_TOPIC = "AI o'zi tanlaydi";
 const MAX_TOPIC = 2000; // prompt uzunligi (Telegram xabari 4096 belgigacha)
 
+// Kunlik jadval (UTC). GitHub'ning o'z jadvali 5-8 soat kechikadi, Cloudflare esa aniq vaqtda ishga tushiradi.
+// AQSh sharqi qishda UTC-5, yozda UTC-4.
+const DAILY = {
+  "0 8 * * *": { workflow: "flow-prompts.yml", label: "Flow promptlari" }, // Toshkent 13:00
+  "0 13 * * *": { label: "ingliz tili darsi", inputs: { daily: "lesson", type: "english", format: "long" } }, // AQSh ertalab 8:00
+  "0 18 * * *": { label: "uzun epizod", inputs: { daily: "serial", type: "cartoon", format: "long" } }, // AQSh 13:00, maktabdan keyingi vaqtdan oldin
+  "0 21 * * *": { label: "Shorts", inputs: { daily: "short", format: "short" } }, // AQSh 16:00
+};
+
+async function runDaily(cron, env) {
+  const job = DAILY[cron];
+  if (!job) return;
+  const inputs = { ...job.inputs };
+  // Shorts navbat bilan: bir kun multik, bir kun o'yin
+  if (inputs.daily === "short") inputs.type = Math.floor(Date.now() / 86400000) % 2 ? "games" : "cartoon";
+  try {
+    await github(env, `/actions/workflows/${job.workflow || WORKFLOW}/dispatches`, {
+      method: "POST",
+      body: JSON.stringify({ ref: "main", inputs }),
+    });
+  } catch (e) {
+    await tg(env, "sendMessage", { chat_id: env.ALLOWED_USER_ID, text: `❌ Kunlik ${job.label} ishga tushmadi.\n\n${e.message}` });
+  }
+}
+
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runDaily(event.cron, env));
+  },
+
   async fetch(req, env) {
     const url = new URL(req.url);
     try {

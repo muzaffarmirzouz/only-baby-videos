@@ -19,3 +19,7 @@ fallthrough = true
 [[kv_namespaces]]
 binding = "CLIPS"
 id = "0abf230121664b56b2ef55fc6e61fdc0"
+
+# Kunlik videolar jadvali (UTC) — src/worker.js dagi DAILY bilan bir xil bo'lsin
+[triggers]
+crons = ["0 8 * * *", "0 13 * * *", "0 18 * * *", "0 21 * * *"]

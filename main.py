@@ -37,11 +37,9 @@ def load_topics():
 
 # Kunlik taqsimot (UTC soat → turlar navbati): asosan multik
 SCHEDULE_TYPES = {
-    6: ["cartoon"],                      # Shorts, Toshkent 11:00
-    10: ["games", "education"],          # Shorts, Toshkent 15:00
     12: ["english"],                     # uzun ingliz tili darsi, Toshkent 17:00
     14: ["cartoon", "story"],            # uzun video, Toshkent 19:00
-    18: ["cartoon"],                     # Shorts, Toshkent 23:00
+    18: ["cartoon", "games"],            # Shorts, Toshkent 23:00
 }
 
 

@@ -1,4 +1,4 @@
-# Har kuni 1 ta uzun video, 1 ta ingliz tili darsi va 3 ta Shorts yaratib, YouTube kanalga yuklaydi.
+# Har kuni 3 ta video: ingliz tili darsi, uzun serial epizodi va 1 ta Shorts yaratib, YouTube kanalga yuklaydi.
 # Qo'lda ishga tushirish: GitHub → Actions → "Daily kids video" → Run workflow
 name: Daily kids video
 run-name: ${{ github.event_name == 'schedule' && (github.event.schedule == '0 14 * * *' && 'Kunlik uzun video (avto)' || github.event.schedule == '0 12 * * *' && 'Kunlik ingliz tili darsi (avto)' || 'Kunlik Shorts (avto)') || format('{0} · {1} · {2}', inputs.format == 'short' && 'Shorts' || format('{0} daq', inputs.length || '3'), inputs.type, (inputs.clips && 'Flow kliplaridan') || (inputs.topic && 'prompt bilan') || (inputs.reference && 'namuna asosida') || 'AI mavzu tanlaydi') }}
@@ -7,8 +7,6 @@ on:
   schedule:
     - cron: "0 14 * * *" # uzun video: 14:00 UTC (Toshkent 19:00, AQSh sharqi 10:00)
     - cron: "0 12 * * *" # uzun ingliz tili darsi: Toshkent 17:00
-    - cron: "0 6 * * *" # Shorts: Toshkent 11:00
-    - cron: "0 10 * * *" # Shorts: Toshkent 15:00
     - cron: "0 18 * * *" # Shorts: Toshkent 23:00 (AQSh kunduzi)
   workflow_dispatch:
     inputs:

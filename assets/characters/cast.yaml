@@ -38,6 +38,13 @@ characters:
     look: a smiling glossy yellow star with tiny arms and legs
     personality: magical and sparkly, takes the friends on adventures and can glow in the dark
     skill: can fly, glow to light up the dark and sprinkle a little sparkle magic
+  - name: Marjona
+    image: marjona.png
+    voice: en-US-AnaNeural # bola ovozi
+    pitch: "+15Hz"
+    look: a cute little girl with dark brown hair pulled back in a low ponytail, big dark brown eyes, a smile with one missing front tooth, tiny gold earrings, a thin gold necklace, a bright red ruffled knee-length dress with a white collar, white socks and red shoes
+    personality: cheerful and caring, Baby Leo's best friend, loves singing and dancing
+    skill: her happy songs cheer up her friends and give them courage
 
 # Syujet: har epizod kichik muammo → qahramonning qobiliyati bilan yechim → baxtli yakun (tasodifiy tanlanadi)
 story_patterns:

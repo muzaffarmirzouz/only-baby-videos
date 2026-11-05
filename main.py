@@ -469,5 +469,22 @@ def main():
             f.write(f"### {script['title']}\n\nhttps://youtu.be/{vid} ({cfg['youtube']['privacy']}, {args.type})\n")
 
 
+def explain_error(e):
+    """Telegram uchun tushunarli sabab; noma'lum xato bo'lsa None (faqat log havolasi yuboriladi)."""
+    text = str(e).lower()
+    if "no credits remaining" in text or "insufficient_quota" in text or "exceeded your current quota" in text:
+        return ("OpenAI hisobidagi pul tugagan. Balansni to'ldiring: "
+                "https://platform.openai.com/settings/organization/billing/")
+    return None
+
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        reason = explain_error(e)
+        gh_output = os.getenv("GITHUB_OUTPUT")
+        if reason and gh_output:
+            with open(gh_output, "a") as f:
+                f.write(f"error={reason}\n")
+        raise

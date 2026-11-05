@@ -157,6 +157,7 @@ jobs:
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
           OUTCOME: ${{ steps.video.outcome }}
+          ERROR_REASON: ${{ steps.video.outputs.error }}
           TITLE: ${{ steps.video.outputs.title }}
           VIDEO_URL: ${{ steps.video.outputs.video_url }}
           IG_URL: ${{ steps.video.outputs.ig_url }}
@@ -190,7 +191,11 @@ jobs:
               curl -s -o /dev/null -d chat_id="$TG_CHAT" --data-urlencode text="$caption" "$api/sendMessage"
             fi
           else
-            text=$(printf '❌ Video yasashda xato bo'"'"'ldi.\n\nLog: %s' "$RUN_URL")
+            if [ -n "$ERROR_REASON" ]; then
+              text=$(printf '❌ Video yasalmadi.\n\nSabab: %s\n\nLog: %s' "$ERROR_REASON" "$RUN_URL")
+            else
+              text=$(printf '❌ Video yasashda xato bo'"'"'ldi.\n\nLog: %s' "$RUN_URL")
+            fi
             curl -s -o /dev/null -d chat_id="$TG_CHAT" --data-urlencode text="$text" "$api/sendMessage"
           fi
 

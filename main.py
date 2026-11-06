@@ -164,7 +164,7 @@ def main():
             pending.notify(f"✅ Navbatdagi video yuklandi!\n\n{title}\n{url}" + (f"\n📸 Instagram: {ig_url}" if ig_url else ""))
         return
     if args.length is None:
-        args.length = 0.75 if args.format == "short" else 3
+        args.length = 0.6 if args.format == "short" else 3
     if args.privacy:
         cfg["youtube"]["privacy"] = args.privacy
     if args.voice:

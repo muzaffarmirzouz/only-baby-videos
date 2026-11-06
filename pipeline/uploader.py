@@ -32,6 +32,36 @@ def get_service():
     return build("youtube", "v3", credentials=creds)
 
 
+def playlist_title(script):
+    """Video qaysi pleylistga tushadi (tomoshabin bir videodan keyin keyingisini ko'rishi uchun)."""
+    short = script.get("format") == "short"
+    if script.get("series"):
+        return "Only Baby & Friends Shorts" if short else "Only Baby & Friends Full Episodes"
+    return {
+        "english": "Learn English with Only Baby",
+        "games": "Fun Quiz Games for Kids",
+        "education": "Learn with Only Baby",
+        "story": "Bedtime Stories for Kids",
+        "facts": "Fun Facts for Kids",
+    }.get(script.get("type"), "Only Baby Cartoons")
+
+
+def add_to_playlist(yt, video_id, title):
+    """Pleylist yo'q bo'lsa yaratadi. Xato videoni yuklashga ta'sir qilmaydi."""
+    try:
+        mine = yt.playlists().list(part="snippet", mine=True, maxResults=50).execute()["items"]
+        found = next((p["id"] for p in mine if p["snippet"]["title"] == title), None)
+        if not found:
+            found = yt.playlists().insert(part="snippet,status", body={
+                "snippet": {"title": title, "description": f"{title} on the Only Baby channel. New videos every day!"},
+                "status": {"privacyStatus": "public"}}).execute()["id"]
+        yt.playlistItems().insert(part="snippet", body={"snippet": {
+            "playlistId": found, "resourceId": {"kind": "youtube#video", "videoId": video_id}}}).execute()
+        print(f"  Pleylist: {title}")
+    except HttpError as e:
+        print(f"  ! pleylistga qo'shilmadi: {e.reason}")
+
+
 def upload(video_path, script, thumb_path, yt_cfg):
     yt = get_service()
     body = {
@@ -65,4 +95,5 @@ def upload(video_path, script, thumb_path, yt_cfg):
         except HttpError as e:
             # Thumbnail uchun kanal telefon orqali tasdiqlangan bo'lishi kerak
             print(f"  thumbnail o'rnatilmadi (kanalni tasdiqlang): {e.reason}")
+    add_to_playlist(yt, video_id, playlist_title(script))
     return video_id

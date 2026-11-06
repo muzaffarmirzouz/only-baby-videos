@@ -62,7 +62,7 @@ and everyone happy again by the end.""" % (
 
 SCENE_SECONDS = {"games": 22}  # savol + 5 soniya taymer + javob
 
-SHORT_WORDS_PER_SCENE = 22
+SHORT_WORDS_PER_SCENE = 16  # 5 ta qisqa sahna: Shorts 45-55 soniya bo'lsin
 SHORT_GUIDE = """
 This is a vertical YouTube Short for kids, 40-55 seconds long. Grab attention in the first 2 seconds,
 no long greeting, one clear idea, fast pace, playful energy. Title: max 60 characters.
@@ -259,12 +259,17 @@ Return JSON:
         outline["parts"] = outline["parts"][:n_parts]
         scenes = []
         for i, part in enumerate(outline["parts"]):
-            start = ("(this is the very beginning; open with a one-sentence hook — a question or a surprising fact, no greeting)"
-                     if short else "(this is the very beginning; start with a warm hello)")
+            if short:
+                start = ("(this is the very beginning; the first sentence drops straight into a funny problem, a surprise "
+                         "or a question — no greeting, no \"One day\", no describing the place)")
+            elif cartoon:
+                start = "(this is the very beginning; something exciting or funny is already happening in the first sentence)"
+            else:
+                start = "(this is the very beginning; start with a warm hello)"
             prev = scenes[-1]["narration"] if scenes else start
             is_last = i == len(outline["parts"]) - 1
             if short:
-                ending = "Keep it fast. The very last sentence of the video is: Follow for more!"
+                ending = "Keep it fast. The story must be completely finished in the last scene: the problem is solved and everyone is happy."
             elif is_last:
                 ending = "End the video with a short recap and a friendly goodbye asking kids to come back for more."
             else:

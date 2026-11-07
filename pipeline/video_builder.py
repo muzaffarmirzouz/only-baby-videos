@@ -5,7 +5,7 @@ import subprocess
 import textwrap
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 ROOT = Path(__file__).resolve().parent.parent
 REMOTION_DIR = ROOT / "video"
@@ -127,12 +127,6 @@ def compose_cover(background, puppets, out_path):
 
 
 def thumbnail(image, title, out_path):
-    img = Image.open(image).convert("RGB").resize((1280, 720))
-    draw = ImageDraw.Draw(img)
-    f = font(92)
-    y = 40
-    for line in textwrap.wrap(title.upper(), width=20)[:3]:
-        w = draw.textlength(line, font=f)
-        draw.text(((1280 - w) / 2, y), line, font=f, fill=(255, 230, 0), stroke_width=8, stroke_fill=(30, 30, 120))
-        y += 110
-    img.save(out_path, "JPEG", quality=90)
+    """Muqova: yozuvsiz, faqat sifatli rasm (kichik bolalar o'qiy olmaydi). title — eski chaqiruvlar uchun."""
+    img = ImageOps.fit(Image.open(image).convert("RGB"), (1280, 720), Image.LANCZOS)
+    img.save(out_path, "JPEG", quality=95)  # YouTube cheklovi 2 MB — 1280x720 shunga sig'adi

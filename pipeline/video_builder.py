@@ -55,7 +55,9 @@ def render(script, scenes, workdir, out_path, music=None, music_volume=0.12, con
                 "duration": s["duration"],
                 "captions": [{"start": a, "end": b, "text": t} for a, b, t in s["captions"]],
                 "motion": i % 4,
-                "quiz": {**s["quiz"], "answerAudio": publish(s["quiz"]["answerAudio"])} if s.get("quiz") else None,
+                "quiz": {**s["quiz"], "answerAudio": publish(s["quiz"]["answerAudio"]),
+                         "itemImages": [publish(p) for p in s["quiz"].get("itemImages") or []] or None}
+                if s.get("quiz") else None,
                 "puppets": [{**pp, "src": publish(pp["src"])} for pp in s.get("puppets") or []],
                 "effect": s.get("effect"),
                 "word": s.get("word"),

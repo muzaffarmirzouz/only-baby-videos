@@ -21,16 +21,25 @@ TYPE_GUIDES = {
     "facts": "Amazing fun facts for kids about one theme (animals, space, ocean, dinosaurs, nature, the human body). Each fact is explained simply with a comparison a child understands.",
     "cartoon": "An original animated cartoon episode with a recurring cute duo of characters (invent them, e.g. a little fox and a bunny), a fun adventure with gentle humor, short lines of dialogue inside the narration (\"Wow!\" said Pip.), and a happy ending.",
     "english": "An English lesson for little kids who are learning English as a new language: one simple everyday theme (for example fruits, colors, animals, family, body parts, toys, food, clothes, greetings). Teach one new word or very short phrase in each scene, slowly and clearly, with very simple sentences. The first scene says hello and names the theme; the last scene quickly reviews all the words and praises the child.",
-    "games": "An interactive quiz game for kids (e.g. guess the animal, which color, count the objects, what sound, odd one out). The first scene welcomes kids and explains the game; the last scene praises them and says goodbye. Every scene in between is one quiz question.",
+    "games": "A \"Find it!\" picture quiz game for little kids: in every question four pictures appear on screen and kids find the right one before a 5-second timer ends. The first scene welcomes kids and explains the game; the last scene praises them and says goodbye. Every scene in between is one question.",
 }
 
-# O'yin (viktorina) sahnalari uchun qo'shimcha maydonlar
+# O'yin: "Toping!" — ekranda 4 ta rasm, bola to'g'risini topadi (kichik bolalar o'qiy olmaydi, javoblar yozuvsiz)
 QUIZ_FORMAT = """For quiz scenes add:
-  "quiz": {"question": short question (max 8 words), "options": [exactly 3 short answers, max 3 words each], "answer": index 0-2 of the correct option},
-  "answer_narration": cheerful reveal, about 20 words, e.g. "It's the cow! Moo! Cows give us milk. Great job!".
-For quiz scenes, "narration" reads the question and the three options (A, B, C) and ends with "Think fast!" (about 25 words).
-The image_prompt / search_query must show the CORRECT answer (it is revealed after the countdown).
-Intro and goodbye scenes have no "quiz" field."""
+  "quiz": {"question": very short on-screen question (max 5 words, e.g. "Find the apple!", "Which one is red?", "Who says moo?"),
+           "items": [exactly 4 pictures, each ONE single object or animal with its color, 2-5 words, e.g. "a red apple"],
+           "answer": index 0-3 of the correct picture (vary it, not always the same position)},
+  "answer_narration": cheerful reveal naming the answer plus one tiny fun fact, about 13 words,
+                      e.g. "Here it is! The red apple! Apples are crunchy and sweet. Great job!".
+For quiz scenes, "narration" says the question out loud, invites kids to look at the pictures and ends with
+"Who can find it first? Ready? Go!" (about 13 words). Do NOT read the four picture names aloud.
+Mix question kinds: find an object, a color, a shape, an animal by its sound, what we use for something, the odd one out,
+how many (pictures showing 1, 2, 3 or 4 of the same thing). Exactly ONE picture is correct; the other three are clearly wrong
+but from the same family (e.g. four fruits), so the game is fun but easy for ages 3-6.
+The on-screen question alone must point to exactly one picture (if all four are keys, say "Find the gold key!").
+Every question must be answerable just by looking at the four pictures: for counting, name the number
+("Find three gems!", pictures of 1, 2, 3 and 4 gems); never ask "how many" without saying which number to find.
+The intro and goodbye scenes have no "quiz" field."""
 
 # Ingliz tili darsi: so'z ekranda yoziladi, o'qituvchi aytadi, bola ovozi takrorlaydi
 ENGLISH_FORMAT = """For every lesson scene add "word": the word or short phrase taught in this scene (1-3 words, lowercase).
@@ -60,7 +69,7 @@ Emotions follow the story: sad or crying when something goes wrong, angry (a gru
 and everyone happy again by the end.""" % (
     CARTOON_ACTIONS, SCENE_EFFECTS)
 
-SCENE_SECONDS = {"games": 22}  # savol + 5 soniya taymer + javob
+SCENE_SECONDS = {"games": 16}  # savol + 5 soniya taymer + javob
 
 SHORT_WORDS_PER_SCENE = 16  # 5 ta qisqa sahna: Shorts 45-55 soniya bo'lsin
 SHORT_GUIDE = """
@@ -181,7 +190,7 @@ Return JSON: {{"type": one of {list(TYPE_GUIDES)}}}""",
         series = series if video_type == "cartoon" else None
         wps = SHORT_WORDS_PER_SCENE if short else self.wps
         if short:
-            # Shorts: tez sahnalar; o'yinda 1 gaplik kirish + 2 ta savol
+            # Shorts: tez sahnalar; o'yinda kirishsiz 3 ta savol — birinchi soniyadan o'yin boshlanadi
             total_scenes = 3 if games else max(3, math.ceil(minutes * self.wpm / wps))
         elif video_type in SCENE_SECONDS:
             total_scenes = max(5, math.ceil(minutes * 60 / SCENE_SECONDS[video_type]))
@@ -274,20 +283,21 @@ Return JSON:
                 ending = "End the video with a short recap and a friendly goodbye asking kids to come back for more."
             else:
                 ending = "Do not end the video yet."
-            example = ('{"narration": "...", "quiz": {"question": "...", "options": ["...", "...", "..."], "answer": 1}, '
+            example = ('{"narration": "...", "quiz": {"question": "...", "items": ["...", "...", "...", "..."], "answer": 2}, '
                        '"answer_narration": "...", "image_prompt": "...", "search_query": "..."}' if games
                        else '{"narration": "...", "image_prompt": "...", "search_query": "..."}')
             rules = ""
-            has_intro = games and i == 0
+            has_intro = games and i == 0 and not short
             has_outro = games and not short and is_last
             if games:
                 first = ""
                 if has_intro:
-                    first = ("Scene 1 is a one-sentence hook that invites kids to play (no quiz, max 12 words). " if short
-                             else "Scene 1 is a short welcome that explains the game (no quiz). ")
+                    first = "Scene 1 is a short welcome that explains the game (no quiz, no specific object named). "
+                elif short and i == 0:
+                    first = "The very first words of the video are the first question, with no greeting. "
                 last = "The final scene is a short goodbye (no quiz). " if has_outro else ""
                 rules = f"{QUIZ_FORMAT}\n{first}{last}EVERY other scene MUST be a quiz scene with the quiz and answer_narration fields."
-            if short:
+            if short and not games:
                 rules += "\nimage_prompt: vertical portrait composition, subject in the center."
             if video_type == "english":
                 rules += f"\n{ENGLISH_FORMAT}"
@@ -339,7 +349,7 @@ Return JSON: {{"scenes": [{example}]}}""",
         raise RuntimeError("OpenAI viktorina savollarini to'g'ri yozmadi, qayta urinib ko'ring.")
 
     def _moderate(self, scenes):
-        text = "\n".join(s["narration"] + " " + s.get("answer_narration", "") for s in scenes)
+        text = "\n".join((s.get("narration") or "") + " " + (s.get("answer_narration") or "") for s in scenes)
         result = self.client.moderations.create(model="omni-moderation-latest", input=text)
         if result.results[0].flagged:
             raise RuntimeError("Ssenariy moderatsiyadan o'tmadi — qayta urinib ko'ring yoki mavzuni o'zgartiring.")
@@ -347,8 +357,8 @@ Return JSON: {{"scenes": [{example}]}}""",
 
 def _valid_quiz(scene):
     q = scene.get("quiz") or {}
-    return (isinstance(q.get("options"), list) and len(q["options"]) == 3 and q.get("question")
-            and q.get("answer") in (0, 1, 2) and scene.get("answer_narration"))
+    return (isinstance(q.get("items"), list) and len(q["items"]) == 4 and q.get("question")
+            and q.get("answer") in (0, 1, 2, 3) and scene.get("answer_narration"))
 
 
 def reference_text(ref):

@@ -21,15 +21,20 @@ const DAILY = {
   "0 8 * * *": { workflow: "flow-prompts.yml", label: "Flow promptlari" }, // Toshkent 13:00
   "0 13 * * *": { label: "ingliz tili darsi", inputs: { daily: "lesson", type: "english", format: "long" } }, // AQSh ertalab 8:00
   "0 18 * * *": { label: "uzun epizod", inputs: { daily: "serial", type: "cartoon", format: "long" } }, // AQSh 13:00, maktabdan keyingi vaqtdan oldin
-  "0 21 * * *": { label: "Shorts", inputs: { daily: "short", format: "short" } }, // AQSh 16:00
+  "0 21 * * *": { label: "Shorts", inputs: { daily: "short", type: "cartoon", format: "short" } }, // AQSh 16:00
+  "0 23 * * *": { label: "\"Toping!\" o'yini", inputs: { daily: "quiz", type: "games", format: "short" } }, // AQSh 18:00
 };
+// Shanba kuni 13:00 UTC (AQSh 8:00) — haftaning "Toping!" savollari bitta 16:9 videoga
+const WEEKLY = { cron: "0 13 * * *", day: 6, label: "haftalik o'yin to'plami", inputs: { daily: "weekly-quiz", type: "games", format: "long" } };
 
 async function runDaily(cron, env) {
-  const job = DAILY[cron];
-  if (!job) return;
+  const jobs = DAILY[cron] ? [DAILY[cron]] : [];
+  if (cron === WEEKLY.cron && new Date().getUTCDay() === WEEKLY.day) jobs.push(WEEKLY);
+  for (const job of jobs) await dispatch(job, env);
+}
+
+async function dispatch(job, env) {
   const inputs = { ...job.inputs };
-  // Shorts navbat bilan: bir kun multik, bir kun o'yin
-  if (inputs.daily === "short") inputs.type = Math.floor(Date.now() / 86400000) % 2 ? "games" : "cartoon";
   try {
     await github(env, `/actions/workflows/${job.workflow || WORKFLOW}/dispatches`, {
       method: "POST",

@@ -39,7 +39,7 @@ class Premium:
 
     def image(self, prompt, out_path, width, height):
         model = self.cfg["image_model"]
-        size = "1024x1536" if height > width else "1536x1024"
+        size = "1024x1024" if height == width else "1024x1536" if height > width else "1536x1024"
         r = self.client.images.generate(model=model, prompt=prompt[:4000], size=size,
                                         quality=self.cfg["image_quality"], n=1)
         img = Image.open(io.BytesIO(base64.b64decode(r.data[0].b64_json))).convert("RGB")

@@ -45,7 +45,7 @@ on:
         description: "Botga yuborilgan kliplar (Telegram file_id, vergul bilan) — ulardan epizod"
         default: ""
       daily:
-        description: "Kunlik jadval (Cloudflare bot qo'yadi): lesson, serial yoki short"
+        description: "Kunlik jadval (Cloudflare bot qo'yadi): lesson, serial, short, quiz yoki weekly-quiz"
         default: ""
       review:
         description: "Avval Telegram'da ko'rsatish (yuklash faqat tasdiqlangandan keyin)"
@@ -147,6 +147,8 @@ jobs:
           if [ -n "$VIDEO_CLIPS" ]; then args+=(--clips "$VIDEO_CLIPS"); fi
           # Kunlik uzun video — davomli serialning bugungi epizodi
           if [ "$VIDEO_DAILY" = "serial" ]; then args+=(--serial); fi
+          # Shanba: hafta davomidagi "Toping!" savollari bitta 16:9 videoga (quiz-* artifact'lardan)
+          if [ "$VIDEO_DAILY" = "weekly-quiz" ]; then args+=(--weekly-quiz); fi
           python -W ignore main.py "${args[@]}"
 
       - name: Telegram xabarnomasi
@@ -207,6 +209,19 @@ jobs:
             output/*/thumbnail.jpg
             output/*/script.json
           retention-days: 7
+          if-no-files-found: ignore
+
+      - name: "\"Toping!\" savollarini haftalik to'plam uchun saqlash (9 kun)"
+        if: success() && inputs.type == 'games' && inputs.format == 'short'
+        uses: actions/upload-artifact@v4
+        with:
+          name: quiz-${{ github.run_number }}
+          path: |
+            output/*/script.json
+            output/*/voice_*.mp3
+            output/*/answer_*.mp3
+            output/*/item_*.jpg
+          retention-days: 9
           if-no-files-found: ignore
 
       - name: Ishlatilgan mavzularni saqlash

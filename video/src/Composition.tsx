@@ -24,7 +24,8 @@ type Caption = { start: number; end: number; text: string };
 // O'yin sahnasi: savol → taymer → javob (revealAt soniyada ochiladi)
 type Quiz = {
   question: string;
-  options: string[];
+  options?: string[]; // eski format: yozuvli 3 ta javob
+  itemImages?: string[] | null; // "Toping!": 4 ta rasm, javob yozuvsiz
   answer: number;
   revealAt: number;
   countdown: number;
@@ -106,7 +107,11 @@ export const KidsVideo: React.FC<Props> = ({
         {scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={sceneFrames(s, clipMode)}>
             {s.quiz ? (
-              <QuizScene scene={s} quiz={s.quiz} vertical={vertical} />
+              s.quiz.itemImages ? (
+                <FindScene scene={s} quiz={s.quiz} vertical={vertical} />
+              ) : (
+                <QuizScene scene={s} quiz={s.quiz} vertical={vertical} />
+              )
             ) : (
               <SceneView scene={s} index={i} cartoon={kind === "cartoon"} vertical={vertical} clipMode={clipMode} />
             )}
@@ -313,7 +318,7 @@ const QuizScene: React.FC<{ scene: Scene; quiz: Quiz; vertical: boolean }> = ({ 
         style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: vertical ? (caption ? 560 : 420) : caption ? 230 : 110 }}
       >
         <div style={{ display: "flex", flexDirection: vertical ? "column" : "row", gap: vertical ? 28 : 40 }}>
-          {quiz.options.map((o, i) => {
+          {(quiz.options || []).map((o, i) => {
             const pop = spring({ frame: frame - 8 - i * 6, fps, config: { damping: 9, mass: 0.6 } });
             const correct = i === quiz.answer;
             const bg = revealed ? (correct ? "#2fbf71" : "rgba(40,40,70,0.75)") : OPTION_COLORS[i % 3];
@@ -381,6 +386,134 @@ const QuizScene: React.FC<{ scene: Scene; quiz: Quiz; vertical: boolean }> = ({ 
             }}
           >
             {caption.text}
+          </div>
+        </AbsoluteFill>
+      ) : null}
+    </AbsoluteFill>
+  );
+};
+
+// "Toping!": 4 ta rasm, 5 soniyalik taymer, keyin to'g'ri rasm kattalashib yashil bo'ladi (yozuvsiz — bolalar o'qimaydi)
+const FindScene: React.FC<{ scene: Scene; quiz: Quiz; vertical: boolean }> = ({ scene, quiz, vertical }) => {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames } = useVideoConfig();
+  const t = frame / fps;
+  const items = quiz.itemImages || [];
+  const revealFrame = Math.round(quiz.revealAt * fps);
+  const revealed = frame >= revealFrame;
+  const reveal = spring({ frame: frame - revealFrame, fps, config: { damping: 9 } });
+  const countStart = quiz.revealAt - quiz.countdown;
+  const left = Math.ceil(quiz.revealAt - t);
+  const opacity = interpolate(frame, [0, 8, durationInFrames - 8, durationInFrames], [0, 1, 1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const card = vertical ? 460 : 400;
+  const gap = vertical ? 44 : 40;
+  const counting = t >= countStart && !revealed;
+
+  return (
+    <AbsoluteFill style={{ opacity, fontFamily, background: "radial-gradient(circle at 50% 40%, #fff7c2 0%, #ffd36b 45%, #ff9f68 100%)" }}>
+      <Audio src={staticFile(scene.audio)} />
+      <Sequence from={revealFrame}>
+        <Audio src={staticFile(quiz.answerAudio)} />
+      </Sequence>
+
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: vertical ? 190 : 50 }}>
+        <div
+          style={{
+            fontSize: vertical ? 100 : 86,
+            fontWeight: 700,
+            color: "#fff",
+            textAlign: "center",
+            maxWidth: vertical ? 980 : 1700,
+            WebkitTextStroke: "6px #1e1e5a",
+            paintOrder: "stroke fill",
+            transform: `scale(${spring({ frame, fps, config: { damping: 9 } })})`,
+          }}
+        >
+          {quiz.question}
+        </div>
+      </AbsoluteFill>
+
+      <AbsoluteFill style={{ alignItems: "center", justifyContent: vertical ? "flex-start" : "center", paddingTop: vertical ? 430 : 30 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${vertical ? 2 : 4}, ${card}px)`,
+            gap,
+          }}
+        >
+          {items.map((src, i) => {
+            const pop = spring({ frame: frame - 6 - i * 5, fps, config: { damping: 10, mass: 0.6 } });
+            const correct = i === quiz.answer;
+            // Taymer paytida rasmlar navbat bilan yengil "sakraydi" — ko'z bilan qidirishga undaydi
+            const wiggle = counting ? Math.sin((t - countStart) * 6 + i * 1.6) * 3 : 0;
+            const scale = pop * (revealed ? (correct ? 1 + 0.16 * reveal : 1 - 0.12 * reveal) : 1);
+            return (
+              <div
+                key={i}
+                style={{
+                  width: card,
+                  height: card,
+                  borderRadius: 48,
+                  overflow: "hidden",
+                  position: "relative",
+                  background: "#fff",
+                  border: `14px solid ${revealed && correct ? "#2fbf71" : "#ffffff"}`,
+                  boxShadow: revealed && correct ? "0 0 0 10px rgba(47,191,113,0.45), 0 18px 40px rgba(0,0,0,0.3)" : "0 14px 30px rgba(0,0,0,0.25)",
+                  opacity: revealed && !correct ? 1 - 0.65 * reveal : 1,
+                  transform: `scale(${scale}) rotate(${wiggle}deg)`,
+                  zIndex: revealed && correct ? 2 : 1,
+                }}
+              >
+                <Img src={staticFile(src)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                {revealed && correct ? (
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 16,
+                      bottom: 16,
+                      width: 110,
+                      height: 110,
+                      borderRadius: "50%",
+                      background: "#2fbf71",
+                      color: "#fff",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 76,
+                      fontWeight: 700,
+                      transform: `scale(${reveal})`,
+                    }}
+                  >
+                    ✓
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </AbsoluteFill>
+
+      {counting ? (
+        <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: vertical ? 230 : 40 }}>
+          <div
+            style={{
+              width: vertical ? 250 : 190,
+              height: vertical ? 250 : 190,
+              borderRadius: "50%",
+              background: "#ff5fa2",
+              border: "12px solid #fff",
+              display: "grid",
+              placeItems: "center",
+              fontSize: vertical ? 150 : 115,
+              fontWeight: 700,
+              color: "#fff",
+              transform: `scale(${1 + 0.15 * Math.max(0, 1 - ((t - countStart) % 1) * 4)})`,
+              boxShadow: "0 16px 40px rgba(0,0,0,0.3)",
+            }}
+          >
+            {left}
           </div>
         </AbsoluteFill>
       ) : null}

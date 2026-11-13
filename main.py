@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent
 TOPICS_FILE = ROOT / "topics_used.json"
 VIDEO_TYPES = ["story", "education", "facts", "cartoon", "games", "english"]
 QUIZ_COUNTDOWN = 5  # soniya
-PREMIUM_FIRST = {"story", "cartoon", "education", "english"}  # pullik rejimda OpenAI rasmi birinchi
+PREMIUM_FIRST = {"story", "cartoon", "education", "english", "games"}  # pullik rejimda OpenAI rasmi birinchi
 STYLE_SOURCES = {
     "stock": ["pixabay_video", "pixabay_photo", "pixabay_illustration", "ai"],
     "ai": ["ai", "pixabay_illustration"],
@@ -144,7 +144,18 @@ def main():
                     help="faqat navbatdagi (limit tufayli kutayotgan) videolarni yuklash")
     ap.add_argument("--style", choices=["auto", "stock", "ai"], default="auto",
                     help="stock = Pixabay video/rasm, ai = AI rasm, auto = config.yaml dagi tartib")
+    ap.add_argument("--weekly-quiz", nargs="*", metavar="PAPKA",
+                    help="haftalik 16:9 to'plam: oxirgi 7 kundagi \"Toping!\" Shorts savollari (sinovda: mahalliy papkalar)")
     args = ap.parse_args()
+    if args.weekly_quiz is not None:
+        from pipeline import weekly_quiz
+        d = weekly_quiz.build(ROOT / "output", args.weekly_quiz)
+        if not d:
+            if os.getenv("GITHUB_OUTPUT"):
+                with open(os.getenv("GITHUB_OUTPUT"), "a") as f:
+                    f.write("error=Hafta davomida \"Toping!\" savollari hali kam — to'plam keyingi shanbaga qoldi\n")
+            raise SystemExit(1)
+        args.from_script, args.format = str(d / "script.json"), "long"
     if args.plan_today or args.serial:
         from pipeline import serial
         from pipeline.script_writer import ScriptWriter
@@ -315,6 +326,21 @@ def main():
                  "action": pr.get("action") or "idle", "speaking": False, "prop": True}
                 for pr in (scene.get("props") or [])[:2] if pr.get("name") in prop_sprites]
 
+    def quiz_item_image(desc, path):
+        """"Toping!" o'yinining bitta rasmi: bitta narsa, kvadrat, oddiy fonda (tayyor bo'lsa qayta chizilmaydi)."""
+        if path.exists():
+            return path
+        prompt = (f"{desc}. One single object only, big and centered, whole object visible, isolated on a soft plain "
+                  f"pastel background, nothing else in the picture. Style: {style}")
+        try:
+            if premium and premium.image(prompt, path, 1024, 1024):
+                return path
+        except Exception as e:
+            print(f"  ! OpenAI rasmi chizilmadi ({e}) — tekin xizmat")
+        if not images.generate(prompt, path, 1024, 1024, seed=base_seed):
+            raise RuntimeError(f"o'yin rasmi chizilmadi: {desc}")
+        return path
+
     scenes = []
     n = len(script["scenes"])
     for i, scene in enumerate(script["scenes"]):
@@ -349,6 +375,8 @@ def main():
                 print(f"  ! fon chizilmadi ({e}) — oddiy rasm")
                 puppets = []
                 clip_dur = fetch_media(scene, i, img, clip)
+        elif (scene.get("quiz") or {}).get("items"):
+            clip_dur = None  # "Toping!" savoli: sahna rasmi o'rniga 4 ta alohida rasm (pastda)
         else:
             clip_dur = fetch_media(scene, i, img, clip)
         if scene.get("user_clip") and clip_dur:
@@ -370,15 +398,19 @@ def main():
                 a_dur = tts.synthesize(scene["answer_narration"], answer_audio, cfg["voice"], cfg["voice_rate"],
                                        premium=premium)
             reveal_at = dur + 0.3 + QUIZ_COUNTDOWN
+            quiz = {**scene["quiz"], "revealAt": reveal_at, "countdown": QUIZ_COUNTDOWN, "answerAudio": answer_audio}
+            if quiz.get("items"):
+                quiz["itemImages"] = [quiz_item_image(it, workdir / f"item_{i:03d}_{k}.jpg")
+                                      for k, it in enumerate(quiz["items"])]
+                item["image"] = quiz["itemImages"][quiz["answer"]]  # muqova va Telegram uchun
+            else:  # eski format: yozuvli 3 ta javob ("A. Sheep" → "Sheep": harfni Remotion o'zi qo'yadi)
+                quiz["options"] = [re.sub(r"^\s*[A-Ca-c][.)]\s*", "", o) for o in scene["quiz"]["options"]]
             item.update({
                 "duration": reveal_at + a_dur,
                 "video": None,
                 "captions": [(a + reveal_at, b + reveal_at, t)
                              for a, b, t in tts.caption_chunks(scene["answer_narration"], a_dur)],
-                "quiz": {**scene["quiz"], "revealAt": reveal_at, "countdown": QUIZ_COUNTDOWN,
-                         # "A. Sheep" → "Sheep": harfni Remotion o'zi qo'yadi
-                         "options": [re.sub(r"^\s*[A-Ca-c][.)]\s*", "", o) for o in scene["quiz"]["options"]],
-                         "answerAudio": answer_audio},
+                "quiz": quiz,
             })
         scenes.append(item)
 
@@ -392,7 +424,7 @@ def main():
     video_builder.render(script, scenes, workdir, final, random.choice(tracks) if tracks else None,
                          vcfg["music_volume"], vcfg.get("render_concurrency", 2), vcfg.get("crf", 16),
                          vcfg.get("captions", False))
-    cover = workdir / "img_000.jpg"
+    cover = Path(scenes[0]["image"]) if scenes else workdir / "img_000.jpg"  # "Toping!" Shorts: 1-savolning rasmi
     if scenes and scenes[0]["puppets"]:  # multikda fon + qahramonlar
         cover = workdir / "cover.jpg"
         video_builder.compose_cover(scenes[0]["image"], scenes[0]["puppets"], cover)

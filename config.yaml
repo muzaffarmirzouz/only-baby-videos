@@ -20,8 +20,9 @@ video:
   crf: 16                # video sifati: kichik = sifatliroq (16 ≈ 8 Mbit/s, YouTube 1080p tavsiyasi)
 
 image_style: >-
-  cute colorful children's book illustration, soft lighting, friendly characters,
-  bright pastel colors, safe for kids, high detail, no text
+  high-quality 3D animated movie still, Pixar-like look, cinematic soft lighting, rich realistic textures
+  (soft fur, fabric, grass, wood), gentle depth of field, warm bright colors, cute rounded characters,
+  safe for kids, no text
 
 youtube:
   privacy: private        # private | unlisted | public
@@ -29,8 +30,9 @@ youtube:
   category_id: "27"       # 27 = Education, 1 = Film & Animation
 
 cartoon_style: >-
-  2D cartoon animation still, kids TV show style, bold clean outlines, flat vibrant colors,
-  expressive cute characters, simple background, no text
+  high-quality 3D animated movie still, Pixar-like look, cinematic soft lighting, rich realistic textures
+  (soft fur, fabric, grass, wood), gentle depth of field, warm bright colors, cute rounded characters,
+  safe for kids, no text
 
 # Har video turi uchun media manbalari (tartib bo'yicha sinaladi):
 #   pixabay_video, pixabay_photo, pixabay_illustration, pixabay_all — Pixabay (PIXABAY_API_KEY)

@@ -1,0 +1,65 @@
+{
+  "title": "Baby Leo & Friends Learn About Friendship Fun!",
+  "summary": "Today, Baby Leo and his friends dive into the magic of friendship! With Bella's clever ideas, they explore how being a good friend makes playtime special. Together, they learn that friendship means caring and having fun together!",
+  "lesson": "Kids learn the importance of friendship and caring for one another.",
+  "beats": [
+    {
+      "beat": "Baby Leo and Marjona are playing with building blocks. They remember how fun it was to help each other in previous adventures.",
+      "character_action": "They decide to build a big tower together, laughing and sharing ideas."
+    },
+    {
+      "beat": "Bella hops in with a smile. She has an idea to play a friendship game!",
+      "character_action": "She gathers everyone and explains the game called ‘Friends’ Compliments.’"
+    },
+    {
+      "beat": "All friends take turns saying nice things about each other. Bobo gives the best hugs, and Marjona sings the funniest songs!",
+      "character_action": "Friends giggle and cheer, feeling happy from kind words."
+    },
+    {
+      "beat": "Suddenly, the blocks start to wobble! Oh no! They need to be careful.",
+      "character_action": "Baby Leo reminds everyone to work together and support each other."
+    },
+    {
+      "beat": "Each friend uses their special skill. Bella hops to grab blocks, Twinkle glows to light the way, and Bobo lifts heavy parts!",
+      "character_action": "They all support Baby Leo as he places the last block on the tower."
+    },
+    {
+      "beat": "The tower is complete! They cheer together, feeling proud of what they built as friends.",
+      "character_action": "They share high fives and happy hugs."
+    },
+    {
+      "beat": "They realize that friendship is not just about fun but also about helping each other. Bella suggests they should celebrate!",
+      "character_action": "They decide to have a snack party with fruits and veggies."
+    },
+    {
+      "beat": "While enjoying their delicious snack, they talk about how great it is to be friends and care for one another.",
+      "character_action": "Marjona sings a happy song about friendship, and they all join in."
+    },
+    {
+      "beat": "The day ends with the friends looking at their tower, remembering how they helped each other.",
+      "character_action": "They promise to always care for their friendship and help one another."
+    },
+    {
+      "beat": "They share one last hug and wave goodbye, excited for their next adventure!",
+      "character_action": "They laugh and hop off together into the sunset."
+    }
+  ],
+  "flow_prompts": [
+    {
+      "prompt": "Use the saved characters Baby Leo, Marjona, Bella, Bobo, Twinkle exactly as in their references. In a bright playroom, Baby Leo and Marjona build a tower with colorful blocks, smiling and sharing ideas. Slow push-in. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music."
+    },
+    {
+      "prompt": "Use the saved characters Baby Leo, Marjona, Bella, Bobo, Twinkle exactly as in their references. In the same playroom, Bella gathers her friends enthusiastically as she explains the friendship game ‘Friends’ Compliments.’ Wide shot. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music."
+    },
+    {
+      "prompt": "Use the saved characters Baby Leo, Marjona, Bella, Bobo, Twinkle exactly as in their references. The friends excitedly take turns sharing compliments among them as they laugh, filled with joy. Close-up on their happy faces. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music."
+    },
+    {
+      "prompt": "Use the saved characters Baby Leo, Marjona, Bella, Bobo, Twinkle exactly as in their references. The friends work together to support Baby Leo as he carefully places the last block on their tall tower. Overhead view. Soft glossy 3D cartoon style, bright warm colors. Audio: natural sound effects only, no dialogue, no music."
+    }
+  ],
+  "date": "2026-11-26",
+  "number": 24,
+  "video": "https://youtu.be/f8qOMFoaA_g",
+  "video_title": "Baby Leo & Friends Celebrate Friendship Fun! | Only Baby & Friends"
+}
